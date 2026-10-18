@@ -1,0 +1,109 @@
+[
+  {
+    "id": "wandering_merchant", "title": "A Wandering Merchant",
+    "text": "A merchant with a creaking cart stops in your village, hawking trinkets from distant lands.",
+    "min_age": 8, "max_age": 70, "weight": 3,
+    "choices": [
+      {"id": "haggle", "label": "Haggle for a bargain", "result": "You drive a hard bargain and he grudgingly respects you.",
+       "effects": [{"type": "stat", "target": "charisma", "delta": 1}, {"type": "skill", "target": "negotiation", "delta": 1.5}]},
+      {"id": "listen", "label": "Listen to his tales of far-off places", "result": "His stories open your mind to a wider world.",
+       "effects": [{"type": "stat", "target": "wisdom", "delta": 1}]},
+      {"id": "ignore", "label": "Ignore him", "result": "You go about your day.", "effects": []}
+    ]
+  },
+  {
+    "id": "stray_dog", "title": "A Stray Dog",
+    "text": "A thin, wary dog follows you home from the edge of the woods.",
+    "min_age": 5, "max_age": 14, "weight": 2,
+    "choices": [
+      {"id": "befriend", "label": "Share your food and befriend it", "result": "The dog never leaves your side, and you learn to read its moods.",
+       "effects": [{"type": "skill", "target": "beast_instinct", "delta": 2}]},
+      {"id": "shoo", "label": "Shoo it away", "result": "It slinks back into the trees.", "effects": []}
+    ]
+  },
+  {
+    "id": "village_bully", "title": "The Village Bully",
+    "text": "An older boy corners you behind the granary and demands what little you have.",
+    "min_age": 7, "max_age": 16, "weight": 2,
+    "choices": [
+      {"id": "fight", "label": "Fight back", "result": "It is a messy scuffle.",
+       "effects": [{"type": "skill", "target": "martial_arts", "delta": 1.5},
+                   {"type": "stat", "target": "strength", "delta": 1, "chance": 0.5},
+                   {"type": "stat", "target": "constitution", "delta": -1, "chance": 0.4}]},
+      {"id": "talk", "label": "Talk him down", "result": "Words work where fists would not.",
+       "effects": [{"type": "stat", "target": "charisma", "delta": 1}, {"type": "skill", "target": "negotiation", "delta": 1}]},
+      {"id": "run", "label": "Run for it", "result": "You are faster than he is.",
+       "effects": [{"type": "stat", "target": "dexterity", "delta": 1}]}
+    ]
+  },
+  {
+    "id": "strange_book", "title": "A Strange Old Book",
+    "text": "Beneath a loose floorboard you find a leather-bound book written in a script you half recognise.",
+    "min_age": 10, "max_age": 50, "weight": 1, "once": true,
+    "choices": [
+      {"id": "study", "label": "Study it in secret", "result": "Months of careful study teach you something, though not without a chill.",
+       "effects": [{"type": "skill", "target": "knowledge", "delta": 3}, {"type": "skill", "target": "necromancy", "delta": 2, "chance": 0.3}]},
+      {"id": "burn", "label": "Burn it before it can do harm", "result": "Some knowledge is better left in the fire.",
+       "effects": [{"type": "skill", "target": "willpower", "delta": 2}]}
+    ]
+  },
+  {
+    "id": "wolves_in_the_woods", "title": "Wolves in the Woods",
+    "text": "A low growl stops you on the forest path. Yellow eyes watch from the undergrowth.",
+    "min_age": 12, "max_age": 60, "weight": 2,
+    "choices": [
+      {"id": "fight", "label": "Stand and fight", "result": "Teeth and fury, and somehow you drive them off.",
+       "effects": [{"type": "stat", "target": "strength", "delta": 1}, {"type": "stat", "target": "constitution", "delta": -1, "chance": 0.5},
+                   {"type": "death", "chance": 0.05, "cause": "wolves"}]},
+      {"id": "climb", "label": "Climb the nearest tree", "result": "You wait out the pack, stiff and shaken.",
+       "effects": [{"type": "stat", "target": "dexterity", "delta": 1}]},
+      {"id": "hide", "label": "Slip away quietly", "result": "You melt into the shadows.",
+       "effects": [{"type": "skill", "target": "stealth", "delta": 2}]}
+    ]
+  },
+  {
+    "id": "fever_outbreak", "title": "Fever in the Village",
+    "text": "A wasting fever sweeps through the village. Neighbours fall ill, and the healers are overwhelmed.",
+    "min_age": 1, "max_age": 90, "weight": 2,
+    "choices": [
+      {"id": "tend", "label": "Help tend the sick", "result": "You do what you can, and people remember it.",
+       "effects": [{"type": "stat", "target": "charisma", "delta": 1}, {"type": "skill", "target": "survival", "delta": 1},
+                   {"type": "stat", "target": "constitution", "delta": -1, "chance": 0.5},
+                   {"type": "death", "chance": 0.03, "cause": "a village fever"}]},
+      {"id": "shelter", "label": "Stay indoors and wait it out", "result": "The fever passes you by.", "effects": []}
+    ]
+  },
+  {
+    "id": "tournament", "title": "A Tournament at the Fair",
+    "text": "Banners go up for a martial tournament. The winner earns a purse, and a name.",
+    "min_age": 16, "max_age": 45, "weight": 2,
+    "choices": [
+      {"id": "enter", "label": "Enter the contest", "result": "You fight bravely, win or lose.",
+       "effects": [{"type": "skill", "target": "swordsmanship", "delta": 2}, {"type": "stat", "target": "constitution", "delta": -1, "chance": 0.3}]},
+      {"id": "watch", "label": "Watch and learn from the fighters", "result": "You study every feint and footwork.",
+       "effects": [{"type": "skill", "target": "tactics", "delta": 1.5}, {"type": "stat", "target": "wisdom", "delta": 1}]}
+    ]
+  },
+  {
+    "id": "old_hermit", "title": "The Hermit on the Hill",
+    "text": "Smoke rises from a hut high on the hill. They say a hermit there knows things.",
+    "min_age": 15, "max_age": 70, "weight": 1, "once": true,
+    "choices": [
+      {"id": "seek", "label": "Climb up and ask to be taught", "result": "He teaches you to quiet your mind.",
+       "effects": [{"type": "stat", "target": "wisdom", "delta": 2}, {"type": "skill", "target": "concentration", "delta": 3}]},
+      {"id": "mock", "label": "Laugh at the old fool", "result": "You return home pleased with yourself, and no wiser.",
+       "effects": [{"type": "stat", "target": "charisma", "delta": -1}]}
+    ]
+  },
+  {
+    "id": "harvest_festival", "title": "The Harvest Festival",
+    "text": "Lanterns, music and long tables fill the village square.",
+    "min_age": 6, "max_age": 80, "weight": 2,
+    "choices": [
+      {"id": "dance", "label": "Join the dancing", "result": "You laugh until your sides ache.",
+       "effects": [{"type": "stat", "target": "charisma", "delta": 1}]},
+      {"id": "work", "label": "Help bring in the harvest", "result": "Honest labour, honest sweat.",
+       "effects": [{"type": "stat", "target": "strength", "delta": 1}, {"type": "stat", "target": "constitution", "delta": 1, "chance": 0.5}]}
+    ]
+  }
+]

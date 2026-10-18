@@ -1,11 +1,11 @@
-import type { Choice, Life, Summary } from './types'
+import type { Campaign, Character, HistoryEntry, Option } from './types'
 
 const BASE: string = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response
   try {
-    res = await fetch(BASE + path, {
+    res = await fetch(`${BASE}/api${path}`, {
       headers: { 'Content-Type': 'application/json' },
       ...init,
     })
@@ -27,21 +27,25 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.status === 204 ? (undefined as T) : ((await res.json()) as T)
 }
 
+const post = <T>(path: string, body?: unknown) =>
+  request<T>(path, { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) })
+
+const enc = encodeURIComponent
+
 export const api = {
   getSkills: () => request<Record<string, string>>('/skills'),
-  listLives: () => request<Life[]>('/lives'),
-  getLife: (id: number) => request<Life>(`/lives/${id}`),
-  getChoices: (id: number) => request<Choice[]>(`/lives/${id}/choices`),
-  getSummary: (id: number) => request<Summary>(`/lives/${id}/summary`),
-  createLife: (name: string, seed?: number) =>
-    request<Life>('/lives', {
-      method: 'POST',
-      body: JSON.stringify({ name, seed: seed ?? null }),
-    }),
-  advance: (id: number, choice: string | null) =>
-    request<Life>(`/lives/${id}/advance`, {
-      method: 'POST',
-      body: JSON.stringify({ choice }),
-    }),
-  deleteLife: (id: number) => request<void>(`/lives/${id}`, { method: 'DELETE' }),
+
+  listCampaigns: () => request<Campaign[]>('/campaigns'),
+  createCampaign: (characterName: string, seed?: number) =>
+    post<Campaign>('/campaign', { character_name: characterName, seed: seed ?? null }),
+  activateCampaign: (id: number) => post<Campaign>(`/campaigns/${id}/activate`),
+  deleteCampaign: (id: number) => request<void>(`/campaigns/${id}`, { method: 'DELETE' }),
+
+  getCharacter: () => request<Character>('/character'),
+  getActions: () => request<Option[]>('/actions'),
+  performAction: (actionId: string) => post<Character>(`/actions/${enc(actionId)}`),
+  advanceTurn: () => post<Character>('/turn/advance'),
+  resolveEvent: (eventId: string, choiceId: string) =>
+    post<Character>(`/events/${enc(eventId)}/choices/${enc(choiceId)}`),
+  getHistory: () => request<HistoryEntry[]>('/history'),
 }

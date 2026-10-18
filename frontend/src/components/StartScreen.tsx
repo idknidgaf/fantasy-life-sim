@@ -1,16 +1,16 @@
 import { useState } from 'react'
 import type { SyntheticEvent } from 'react'
-import type { Life } from '../types'
+import type { Campaign } from '../types'
 
 interface Props {
-  lives: Life[]
+  campaigns: Campaign[]
   busy: boolean
   onCreate: (name: string, seed?: number) => void
   onOpen: (id: number) => void
   onDelete: (id: number) => void
 }
 
-export default function StartScreen({ lives, busy, onCreate, onOpen, onDelete }: Props) {
+export default function StartScreen({ campaigns, busy, onCreate, onOpen, onDelete }: Props) {
   const [name, setName] = useState('')
   const [seedText, setSeedText] = useState('')
 
@@ -56,36 +56,41 @@ export default function StartScreen({ lives, busy, onCreate, onOpen, onDelete }:
         </form>
       </section>
 
-      {lives.length > 0 && (
+      {campaigns.length > 0 && (
         <section className="card">
-          <h3>Past and present lives</h3>
+          <h3>Saved campaigns</h3>
           <ul className="lives">
-            {lives.map((l) => (
-              <li key={l.id}>
-                <div>
-                  <strong>{l.name}</strong>
-                  <span className="muted">
-                    {l.alive
-                      ? ` · alive, age ${l.age}`
-                      : ` · died at ${l.age} of ${l.cause_of_death ?? 'unknown causes'}`}
-                  </span>
-                </div>
-                <div className="row">
-                  <button disabled={busy} onClick={() => onOpen(l.id)}>
-                    {l.alive ? 'Continue' : 'View'}
-                  </button>
-                  <button
-                    className="danger"
-                    disabled={busy}
-                    onClick={() => {
-                      if (window.confirm(`Delete ${l.name}'s life forever?`)) onDelete(l.id)
-                    }}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </li>
-            ))}
+            {campaigns.map((c) => {
+              const ch = c.character
+              return (
+                <li key={c.id}>
+                  <div>
+                    <strong>{c.name}</strong>
+                    <span className="muted">
+                      {!ch
+                        ? ' · empty'
+                        : ch.alive
+                          ? ` · alive, age ${ch.age}`
+                          : ` · died at ${ch.age} of ${ch.cause_of_death ?? 'unknown causes'}`}
+                    </span>
+                  </div>
+                  <div className="row">
+                    <button disabled={busy} onClick={() => onOpen(c.id)}>
+                      {ch?.alive === false ? 'View' : 'Continue'}
+                    </button>
+                    <button
+                      className="danger"
+                      disabled={busy}
+                      onClick={() => {
+                        if (window.confirm(`Delete "${c.name}" forever?`)) onDelete(c.id)
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </li>
+              )
+            })}
           </ul>
         </section>
       )}

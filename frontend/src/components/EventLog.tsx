@@ -1,18 +1,28 @@
 import type { HistoryEntry } from '../types'
 
 export default function EventLog({ history }: { history: HistoryEntry[] }) {
-  const entries = [...history].reverse()
+  // Group entries by age, newest age first, keeping the order within each age.
+  const groups = new Map<number, HistoryEntry[]>()
+  for (const h of history) groups.set(h.age, [...(groups.get(h.age) ?? []), h])
+  const ages = [...groups.keys()].sort((a, b) => b - a)
+
   return (
     <section className="card">
       <h3>Life story</h3>
-      {entries.length === 0 ? (
+      {ages.length === 0 ? (
         <p className="muted">Your story has not begun yet.</p>
       ) : (
         <ol className="log">
-          {entries.map((h) => (
-            <li key={h.age}>
-              <span className="log-age">Age {h.age}</span>
-              <span>{h.events.length ? h.events.join('. ') + '.' : 'A quiet year.'}</span>
+          {ages.map((age) => (
+            <li key={age}>
+              <span className="log-age">Age {age}</span>
+              <div>
+                {groups.get(age)!.map((h, i) => (
+                  <p key={i} className={`kind-${h.kind}`}>
+                    {h.text}
+                  </p>
+                ))}
+              </div>
             </li>
           ))}
         </ol>

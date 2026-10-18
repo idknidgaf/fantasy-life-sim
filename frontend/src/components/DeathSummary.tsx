@@ -17,7 +17,8 @@ export default function DeathSummary({ summary, onNewLife }: Props) {
       <p className="muted">
         {summary.defining_skill
           ? `They will be remembered for their ${summary.defining_skill}.`
-          : 'They never found a calling.'}
+          : 'They never found a calling.'}{' '}
+        They faced {summary.events_faced} defining {summary.events_faced === 1 ? 'moment' : 'moments'}.
       </p>
 
       <div className="summary-grid">
