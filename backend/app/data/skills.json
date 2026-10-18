@@ -1,0 +1,9 @@
+{
+  "combat":  ["swordsmanship", "archery", "martial_arts", "tactics"],
+  "magic":   ["elemental_magic", "spirit_magic", "necromancy", "enchantment"],
+  "survival":["exploration", "tracking", "stealth", "survival"],
+  "mental":  ["concentration", "willpower", "mental_resistance", "knowledge"],
+  "social":  ["command", "negotiation", "deception", "intimidation"],
+  "crafting":["alchemy", "smithing", "enchanting", "cooking"],
+  "supernatural": ["divine_power", "draconic_mastery", "beast_instinct", "soul_control"]
+}
