@@ -43,6 +43,12 @@ def _get_life(session: Session, life_id: int) -> Life:
     return life
 
 
+@app.get("/skills")
+def get_skills():
+    """{skill_id: category}, straight from skills.json."""
+    return sim.load_skills()
+
+
 @app.post("/lives", response_model=Life, status_code=201)
 def create_life(body: LifeCreate, session: Session = Depends(get_session)):
     seed = body.seed if body.seed is not None else random.randrange(2**31)

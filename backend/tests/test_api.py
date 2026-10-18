@@ -79,3 +79,9 @@ def test_list_and_delete(client):
     assert len(client.get("/lives").json()) == 2
     assert client.delete(f"/lives/{a}").status_code == 204
     assert client.get(f"/lives/{a}").status_code == 404
+
+
+def test_skills_endpoint(client):
+    skills = client.get("/skills").json()
+    assert skills["swordsmanship"] == "combat"
+    assert len(skills) == 28
