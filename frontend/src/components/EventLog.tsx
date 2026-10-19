@@ -7,8 +7,8 @@ export default function EventLog({ history }: { history: HistoryEntry[] }) {
   const ages = [...groups.keys()].sort((a, b) => b - a)
 
   return (
-    <section className="card">
-      <h3>Life story</h3>
+    <section className="card history-panel">
+      <h3>History</h3>
       {ages.length === 0 ? (
         <p className="muted">Your story has not begun yet.</p>
       ) : (
@@ -16,7 +16,7 @@ export default function EventLog({ history }: { history: HistoryEntry[] }) {
           {ages.map((age) => (
             <li key={age}>
               <span className="log-age">Age {age}</span>
-              <div>
+              <div className="log-entries">
                 {groups.get(age)!.map((h, i) => (
                   <p key={i} className={`kind-${h.kind}`}>
                     {h.text}

@@ -59,7 +59,7 @@ def test_infancy_offers_no_actions_but_childhood_does():
     ids = [a["id"] for a in sim.offer_actions(make("human", age=8), 1)]
     assert any(i.startswith("train:") for i in ids) and "rest" in ids and "work" not in ids
     adult = [a["id"] for a in sim.offer_actions(make("human", age=25), 1)]
-    assert "work" in adult
+    assert "work" in adult and any(i.startswith("train_stat:") for i in adult)
 
 
 def test_children_only_train_age_appropriate_categories():

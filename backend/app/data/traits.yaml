@@ -79,7 +79,7 @@
   name: Regenerative
   description: Your body knits itself back together with unsettling speed.
   tier: uncommon
-  modifiers: {stat: {constitution: 2}, mortality: 0.85}
+  modifiers: {stat: {constitution: 2}, mortality: 0.85, heal_bonus: 0.1}
   abilities: [regeneration]
 
 - id: draconic_scales

@@ -21,6 +21,10 @@ ADDED_COLUMNS = {
     "counters": "JSON DEFAULT '{}'",
     "items": "JSON DEFAULT '{}'",
     "queued_events": "JSON DEFAULT '[]'",
+    "actions_taken": "JSON DEFAULT '[]'",
+    "health": "INTEGER",
+    "stress": "FLOAT NOT NULL DEFAULT 0",
+    "happiness": "FLOAT NOT NULL DEFAULT 50",
 }
 
 

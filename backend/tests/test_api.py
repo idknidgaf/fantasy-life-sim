@@ -163,9 +163,9 @@ def test_one_action_per_year_then_advance(client):
     advance_to_stage(client, "adolescence")
     actions = client.get("/api/actions").json()
     r = client.post(f"/api/actions/{actions[0]['id']}")
-    assert r.status_code == 200 and r.json()["action_taken_label"]
-    assert client.get("/api/actions").json() == []
-    assert client.post(f"/api/actions/{actions[0]['id']}").status_code == 409
+    assert r.status_code == 200 and r.json()["actions_taken_labels"]
+    # Adolescence allows three actions per year, so more are still on offer.
+    assert client.get("/api/actions").json()
     age = r.json()["age"]
     assert client.post("/api/turn/advance").json()["age"] == age + 1
 

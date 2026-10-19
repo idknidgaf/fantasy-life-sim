@@ -17,8 +17,12 @@ class Character(BaseModel):
     location: str = "village"
     history: list[dict] = Field(default_factory=list)          # {age, kind, text, event_id}
     cause_of_death: str | None = None
-    action_taken: str | None = None        # action performed this year, if any
+    actions_taken: list[str] = Field(default_factory=list)   # actions performed this year
     pending_event: str | None = None       # event id waiting for a decision
+    # Vitals. health is set at birth from max_health; None marks an old save (repair fills it).
+    health: int | None = None
+    stress: float = 0.0
+    happiness: float = 50.0
     queued_events: list[str] = Field(default_factory=list)
     # Hidden talent. Rolled ONCE at birth and then only ever read, never rerolled.
     hidden_talent: str | None = None

@@ -1,4 +1,4 @@
-import { STAT_INFO, pretty } from '../format'
+import { RARITY_INFO, STAT_INFO, TIER_ORDER, modifierText, pretty, type Tier } from '../format'
 import type { Character } from '../types'
 import AxisBar from './AxisBar'
 
@@ -12,9 +12,10 @@ export default function CharacterSheet({ character, prevStats, skillCategories }
   const skills = Object.entries(character.skills).sort((a, b) => b[1] - a[1])
   const personality = character.axes.filter((a) => a.group === 'personality')
   const alignment = character.axes.filter((a) => a.group === 'alignment')
+  const mods = character.species_stat_modifiers
 
   return (
-    <section className="card">
+    <section className="card character-sheet">
       <header className="sheet-head">
         <h2>{character.name}</h2>
         <p className="muted">
@@ -23,6 +24,10 @@ export default function CharacterSheet({ character, prevStats, skillCategories }
         </p>
         <p className="muted small">Home: {pretty(character.location)}</p>
       </header>
+
+      {character.species_description && (
+        <p className="species-desc muted small">{character.species_description}</p>
+      )}
 
       {character.talent && (
         <div className="talent-banner" title={character.talent.description}>
@@ -59,14 +64,33 @@ export default function CharacterSheet({ character, prevStats, skillCategories }
       </ul>
       {character.stat_cap > 100 && <p className="muted small">Your kind can grow beyond the mortal limit (cap {character.stat_cap}).</p>}
 
+      {Object.keys(mods).length > 0 && (
+        <p className="muted small racial-mods">Racial modifiers: {modifierText(mods)}</p>
+      )}
+
       <h3>Traits</h3>
+      <div className="rarity-legend">
+        {TIER_ORDER.map((tier) => (
+          <span key={tier} className={`legend-item tier-${tier}`} style={{ color: RARITY_INFO[tier].color }}>
+            <span className="legend-dot" style={{ background: RARITY_INFO[tier].color }} />
+            <span className={tier === 'origin' ? 'quartz-text' : undefined}>{RARITY_INFO[tier].label}</span>
+          </span>
+        ))}
+      </div>
       {character.traits.length === 0 ? (
         <p className="muted">No notable traits yet.</p>
       ) : (
-        <ul className="chips">
+        <ul className="trait-list">
           {character.traits.map((t) => (
-            <li key={t.id} className={`trait tier-${t.tier}`} title={`${t.description} (${t.tier})`}>
-              {t.name}
+            <li key={t.id} className={`trait-entry tier-${t.tier}`}>
+              <div className="trait-head">
+                <span className={`trait-name tier-${t.tier}`}>{t.name}</span>
+                <span className={`trait-tier-badge tier-${t.tier}`} style={{ color: RARITY_INFO[t.tier as Tier]?.color }}>
+                  <span className={t.tier === 'origin' ? 'quartz-text' : undefined}>{RARITY_INFO[t.tier as Tier]?.label}</span>
+                </span>
+              </div>
+              {t.effects && <p className="trait-effects">{t.effects}</p>}
+              <p className="trait-desc muted small">{t.description}</p>
             </li>
           ))}
         </ul>

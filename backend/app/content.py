@@ -20,7 +20,17 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 DATA_DIR = Path(__file__).parent / "data"
 STATS = ["constitution", "dexterity", "wisdom", "strength", "charisma"]
-ACTIONS = {"play", "work", "rest", "train"}
+ACTIONS = {"play", "work", "rest", "train", "train_stat", "socialize"}
+MONSTER_STAGE_NAMES = {
+    "infancy": "Hatchling",
+    "early_childhood": "Hatchling",
+    "childhood": "Juvenile",
+    "adolescence": "Juvenile",
+    "young_adult": "Adult",
+    "adulthood": "Adult",
+    "middle_age": "Adult",
+    "elder": "Ancient",
+}
 CATEGORIES = {"humanoid", "beast", "monstrous"}
 HUMAN_YEARS = 80          # stage thresholds are expressed in human-equivalent years
 
@@ -50,9 +60,11 @@ class AxisDef(Strict):
 class StageDef(Strict):
     id: str
     name: str
+    monster_name: str | None = None     # display name for beast/monstrous species
     starts_at: float = Field(ge=0)
     description: str
     actions: list[str] = []
+    action_count: int = Field(default=1, ge=0)   # actions allowed per year at this stage
     train_categories: list[str] = []
     growth_chance: float = Field(default=0, ge=0, le=1)
     aging_chance: float = Field(default=0, ge=0, le=1)
@@ -92,6 +104,7 @@ class TraitModifiers(Strict):
     stat: dict[str, int] = {}
     skill_aptitude: dict[str, float] = {}
     mortality: float = Field(default=1.0, gt=0)
+    heal_bonus: float = Field(default=0.0, ge=0)   # extra max-health fraction healed each Age Up
     unlock_skills: list[str] = []
 
 
@@ -222,6 +235,7 @@ NEEDS_BOUND = {
 EFFECT_KINDS = {
     "stat_delta", "skill_xp", "axis_delta", "grant_trait", "remove_trait", "flag", "clear_flag",
     "counter", "grant_item", "consume_item", "set_location", "die", "trigger_event",
+    "health_delta", "stress_delta", "happiness_delta",
 }
 
 
@@ -387,6 +401,9 @@ def _check_effect(eff: Any, where: str, ct: Content, refs: _Refs, errs: list[str
             errs.append(f"{where}: set_location needs a location tag")
         else:
             refs.locations_set.add(value)
+    elif kind in ("health_delta", "stress_delta", "happiness_delta"):
+        if not _num(value):
+            errs.append(f"{where}: '{kind}' must be a number")
     elif kind == "die":
         if not isinstance(value, dict) or not isinstance(value.get("cause"), str):
             errs.append(f"{where}: die needs a mapping with a text 'cause'")

@@ -30,6 +30,7 @@ class TraitRead(BaseModel):
     name: str
     description: str
     tier: str
+    effects: str = ""               # e.g. "+6 Constitution, ×0.8 mortality"
 
 
 class SpeciesBrief(BaseModel):
@@ -81,6 +82,8 @@ class CharacterRead(BaseModel):
     campaign_id: int
     name: str
     species: SpeciesBrief
+    species_description: str
+    species_stat_modifiers: dict[str, int]
     stage: StageRead
     location: str
     age: int
@@ -88,6 +91,15 @@ class CharacterRead(BaseModel):
     stats: dict[str, int]                 # base stats
     effective_stats: dict[str, int]       # base + trait bonuses
     stat_cap: int
+    # Vitals
+    health: int
+    max_health: int
+    stress: float
+    happiness: float
+    # Action budget for the current year
+    action_budget: int
+    actions_remaining: int
+    actions_taken_labels: list[str]
     skills: dict[str, float]
     traits: list[TraitRead]
     axes: list[AxisRead]
@@ -95,8 +107,6 @@ class CharacterRead(BaseModel):
     items: list[ItemRead]
     talent: TalentRead | None             # ONLY once awakened; a dormant talent is never exposed
     cause_of_death: str | None
-    action_taken: str | None
-    action_taken_label: str | None
     pending_event: PendingEventRead | None
     summary: dict | None                  # filled in once the character has died
 

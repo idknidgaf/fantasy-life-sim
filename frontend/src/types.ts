@@ -16,7 +16,8 @@ export interface Trait {
   id: string
   name: string
   description: string
-  tier: 'common' | 'uncommon' | 'rare' | 'legendary'
+  tier: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'unique' | 'ultimate' | 'origin'
+  effects: string
 }
 
 export interface SpeciesBrief {
@@ -84,6 +85,8 @@ export interface Character {
   campaign_id: number
   name: string
   species: SpeciesBrief
+  species_description: string
+  species_stat_modifiers: Record<string, number>
   stage: Stage
   location: string
   age: number
@@ -91,6 +94,13 @@ export interface Character {
   stats: Record<string, number>
   effective_stats: Record<string, number>
   stat_cap: number
+  health: number
+  max_health: number
+  stress: number
+  happiness: number
+  action_budget: number
+  actions_remaining: number
+  actions_taken_labels: string[]
   skills: Record<string, number>
   traits: Trait[]
   axes: Axis[]
@@ -98,8 +108,6 @@ export interface Character {
   items: Item[]
   talent: Talent | null
   cause_of_death: string | null
-  action_taken: string | null
-  action_taken_label: string | null
   pending_event: PendingEvent | null
   summary: Summary | null
 }

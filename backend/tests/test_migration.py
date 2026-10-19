@@ -14,7 +14,7 @@ CREATE TABLE campaign (id INTEGER PRIMARY KEY, name VARCHAR NOT NULL, seed INTEG
                        active BOOLEAN NOT NULL, created_at DATETIME NOT NULL);
 CREATE TABLE characterrecord (id INTEGER PRIMARY KEY, campaign_id INTEGER NOT NULL, name VARCHAR NOT NULL,
                               age INTEGER NOT NULL, alive BOOLEAN NOT NULL, stats JSON, skills JSON, history JSON,
-                              cause_of_death VARCHAR, action_taken VARCHAR, pending_event VARCHAR);
+                              cause_of_death VARCHAR, pending_event VARCHAR);
 """
 
 
@@ -26,7 +26,7 @@ def make_old_save(path):
                 conn.execute(text(statement))
         conn.execute(text("INSERT INTO campaign VALUES (1, 'Old Aren', 123, 1, '2026-01-01 00:00:00')"))
         conn.execute(text(
-            "INSERT INTO characterrecord VALUES (1, 1, 'Old Aren', 20, 1, :stats, :skills, :history, NULL, NULL, 'wandering_merchant')"),
+            "INSERT INTO characterrecord VALUES (1, 1, 'Old Aren', 20, 1, :stats, :skills, :history, NULL, 'wandering_merchant')"),
             {"stats": json.dumps({"constitution": 40, "dexterity": 40, "wisdom": 40, "strength": 40, "charisma": 40}),
              "skills": json.dumps({"archery": 3.5}),
              "history": json.dumps([{"age": 1, "kind": "birth", "text": "Born.", "event_id": None}])},
@@ -47,6 +47,9 @@ def test_old_save_is_upgraded_in_place_and_backed_up(tmp_path):
     assert c.species_id == "human" and c.traits == [] and c.talent_state == "none"
     assert c.hidden_talent is None and c.location == "village"
     assert set(c.axes) == {"bravery", "curiosity", "sociability", "discipline", "law_chaos", "good_evil"}
+    # The migration fills in vitals and the new actions list with safe defaults.
+    assert c.actions_taken == [] and c.health is not None and c.health > 0
+    assert c.stress == 0 and c.happiness == 50
 
 
 def test_upgraded_character_can_keep_playing(tmp_path):

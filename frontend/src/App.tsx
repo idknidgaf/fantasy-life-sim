@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { api } from './api'
-import ActionPanel from './components/ActionPanel'
 import CharacterSheet from './components/CharacterSheet'
 import DeathSummary from './components/DeathSummary'
 import EventLog from './components/EventLog'
 import EventPanel from './components/EventPanel'
+import LifeTab from './components/LifeTab'
+import NavSidebar, { type Tab } from './components/NavSidebar'
 import StartScreen from './components/StartScreen'
+import VitalsPanel from './components/VitalsPanel'
 import type { Campaign, Character, HistoryEntry, Option, Species } from './types'
 
 /** Everything the game screen needs, fetched from the active campaign. */
@@ -26,6 +28,7 @@ export default function App() {
   const [actions, setActions] = useState<Option[]>([])
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [prevStats, setPrevStats] = useState<Record<string, number> | null>(null)
+  const [tab, setTab] = useState<Tab>('character')
   const [inMenu, setInMenu] = useState(true)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -123,6 +126,11 @@ export default function App() {
   const resolveEvent = (eventId: string, choiceId: string) =>
     change(() => api.resolveEvent(eventId, choiceId))
 
+  // When actions are taken, switch to Life tab so the user sees their action budget.
+  const onAction = (id: string) => {
+    void performAction(id)
+  }
+
   return (
     <div className="app">
       <header className="topbar">
@@ -152,28 +160,36 @@ export default function App() {
           onDelete={deleteCampaign}
         />
       ) : (
-        <main className="game">
-          <CharacterSheet
-            character={character}
-            prevStats={prevStats}
-            skillCategories={skillCategories}
-          />
-          <div className="column">
+        <main className="game-layout">
+          <aside className="sidebar-left">
+            <NavSidebar activeTab={tab} onTabChange={setTab} character={character} />
+          </aside>
+
+          <section className="content-main">
             {!character.alive && character.summary ? (
               <DeathSummary summary={character.summary} onNewLife={goToMenu} />
             ) : character.pending_event ? (
               <EventPanel event={character.pending_event} busy={busy} onChoose={resolveEvent} />
+            ) : tab === 'character' ? (
+              <CharacterSheet
+                character={character}
+                prevStats={prevStats}
+                skillCategories={skillCategories}
+              />
             ) : (
-              <ActionPanel
+              <LifeTab
                 character={character}
                 actions={actions}
                 busy={busy}
-                onAction={performAction}
-                onAdvance={advanceTurn}
+                onAction={onAction}
               />
             )}
+          </section>
+
+          <aside className="sidebar-right">
+            <VitalsPanel character={character} busy={busy} onAdvance={advanceTurn} />
             <EventLog history={history} />
-          </div>
+          </aside>
         </main>
       )}
     </div>

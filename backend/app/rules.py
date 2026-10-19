@@ -5,7 +5,8 @@ import random
 
 from .character import Character
 from .content import (
-    HUMAN_YEARS, REQ_KINDS, STATS, ConditionsDef, Content, SpeciesDef, StageDef,
+    HUMAN_YEARS, MONSTER_STAGE_NAMES, REQ_KINDS, STATS, ConditionsDef, Content,
+    SpeciesDef, StageDef,
 )
 
 AXIS_LIMIT = 100
@@ -33,6 +34,13 @@ def stage_at(sp: SpeciesDef, age: int, ct: Content) -> StageDef:
 
 def stage_of(c: Character, ct: Content) -> StageDef:
     return stage_at(species_of(c, ct), c.age, ct)
+
+
+def stage_name(sp: SpeciesDef, stage: StageDef) -> str:
+    """Display name for the stage. Beasts and monsters use Hatchling/Juvenile/Adult/Ancient."""
+    if sp.category == "humanoid":
+        return stage.name
+    return stage.monster_name or MONSTER_STAGE_NAMES.get(stage.id, stage.name)
 
 
 def stage_index(ct: Content, stage_id: str) -> int:
@@ -69,6 +77,69 @@ def mortality_multiplier(c: Character, ct: Content) -> float:
     for t in trait_defs(c, ct):
         mult *= t.modifiers.mortality
     return mult
+
+
+# ---------------------------------------------------------------- vitals
+
+VITALS_LIMIT = 100.0
+BASE_AGE_UP_HEAL = 0.10          # fraction of max health recovered at each Age Up
+
+
+def max_health(c: Character, ct: Content) -> int:
+    return 40 + effective_stat(c, ct, "constitution")
+
+
+def clamp_vital(value: float) -> float:
+    return round(max(0.0, min(VITALS_LIMIT, value)), 1)
+
+
+def stress_rate(c: Character) -> float:
+    """Happiness slows Stress gain: 100 happiness halves it, 0 happiness raises it by half."""
+    return 1.5 - clamp_vital(c.happiness) / VITALS_LIMIT
+
+
+def gain_stress(c: Character, amount: float) -> float:
+    """Add Stress scaled by Happiness. Returns the actual change."""
+    before = c.stress
+    c.stress = clamp_vital(c.stress + amount * stress_rate(c))
+    return c.stress - before
+
+
+def change_happiness(c: Character, amount: float) -> float:
+    before = c.happiness
+    c.happiness = clamp_vital(c.happiness + amount)
+    return c.happiness - before
+
+
+def heal_bonus(c: Character, ct: Content) -> float:
+    """Extra fraction of max health healed at each Age Up, from traits (e.g. Regenerative)."""
+    return sum(t.modifiers.heal_bonus for t in trait_defs(c, ct))
+
+
+def change_health(c: Character, ct: Content, amount: float) -> int:
+    """Change current health, clamped to 0..max_health. Returns the actual change."""
+    before = c.health if c.health is not None else max_health(c, ct)
+    after = max(0, min(max_health(c, ct), round(before + amount)))
+    c.health = after
+    return after - before
+
+
+def describe_trait_effects(t, ct: Content) -> str:
+    """Player-facing summary of what a trait does, e.g. '+6 Constitution, ×0.8 mortality'."""
+    parts: list[str] = []
+    for stat, v in sorted(t.modifiers.stat.items(), key=lambda kv: -abs(kv[1])):
+        parts.append(f"{v:+d} {pretty(stat)}")
+    for key, v in sorted(t.modifiers.skill_aptitude.items()):
+        parts.append(f"×{v:g} {pretty(key)} XP")
+    if t.modifiers.mortality != 1.0:
+        parts.append(f"×{t.modifiers.mortality:g} mortality")
+    if t.modifiers.heal_bonus:
+        parts.append(f"Each Age Up heals +{t.modifiers.heal_bonus:.0%} more")
+    for skill in t.modifiers.unlock_skills:
+        parts.append(f"Unlocks {pretty(skill)}")
+    for ability in t.abilities:
+        parts.append(pretty(ability))
+    return ", ".join(parts)
 
 
 def unlocked_skills(c: Character, ct: Content) -> set[str]:
@@ -291,11 +362,17 @@ def apply_effect(effect: dict, c: Character, ct: Content, rng: random.Random, no
     v = effect[kind]
 
     if kind == "stat_delta":
+        harm = 0
         for stat, delta in v.items():
             before = c.stats[stat]
             c.stats[stat] = clamp_stat(c, ct, before + delta)
             if c.stats[stat] != before:
                 notes.append(f"{c.stats[stat] - before:+d} {stat}")
+                harm += min(0, c.stats[stat] - before)
+        if harm:                                                     # setbacks are stressful
+            stress = gain_stress(c, -harm * 2)
+            if stress:
+                notes.append(f"+{stress:.0f} stress")
     elif kind == "skill_xp":
         for key, amount in v.items():
             skill = key if key in ct.skills else _category_target(c, ct, key, rng)
@@ -336,6 +413,23 @@ def apply_effect(effect: dict, c: Character, ct: Content, rng: random.Random, no
             notes.append(f"used {ct.items[target].name}")
     elif kind == "set_location":
         c.location = v
+    elif kind == "health_delta":
+        change = change_health(c, ct, v)
+        if change:
+            notes.append(f"{change:+d} health")
+    elif kind == "stress_delta":
+        before = c.stress
+        if v > 0:
+            gain_stress(c, v)
+        else:
+            c.stress = clamp_vital(c.stress + v)
+        change = c.stress - before
+        if change:
+            notes.append(f"{change:+.0f} stress")
+    elif kind == "happiness_delta":
+        change = change_happiness(c, v)
+        if change:
+            notes.append(f"{change:+.0f} happiness")
     elif kind == "die":
         c.alive = False
         c.cause_of_death = v["cause"]

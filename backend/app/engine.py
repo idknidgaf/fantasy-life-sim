@@ -16,14 +16,24 @@ import random
 from .character import Character
 from .content import STATS, Content, get_content
 from .rules import (
-    alignment_label, apply_effects, clamp_stat, conditions_met, effective_stat, gain_skill,
-    grant_trait, has_ability, mortality_multiplier, pretty, queue_event, requirements_met,
-    skill_aptitude, species_of, stage_of, trainable_skills, unmet_requirements_text,
+    BASE_AGE_UP_HEAL, alignment_label, apply_effects, change_happiness, change_health,
+    clamp_stat, clamp_vital, conditions_met, effective_stat, gain_skill, gain_stress,
+    grant_trait, has_ability, heal_bonus, max_health, mortality_multiplier, pretty,
+    queue_event, requirements_met, skill_aptitude, species_of, stage_of, trainable_skills,
+    unmet_requirements_text,
 )
 
 TALENT_BIRTH_CHANCE = 0.01
 HINT_CHANCE = 0.10
-DEFAULT_LABELS = {"play": "Play and explore", "work": "Take on hard work", "rest": "Rest and look after yourself"}
+TRAIN_STAT_STRESS = 8.0
+TRAIN_SKILL_STRESS = 6.0
+WORK_STRESS = 6.0
+DEFAULT_LABELS = {
+    "play": "Play and explore",
+    "work": "Take on hard work",
+    "rest": "Take the time off",
+    "socialize": "Socialize",
+}
 
 
 class NotAllowed(Exception):
@@ -53,6 +63,32 @@ def _die(c: Character, cause: str) -> None:
     c.alive = False
     c.cause_of_death = cause
     _log(c, "death", f"Died at age {c.age} of {cause}.")
+
+
+def _check_vitals(c: Character, ct: Content) -> None:
+    """Clamp health to its maximum, apply stress burnout, and kill at 0 health.
+
+    Death is only marked here (alive=False, cause set); the caller logs it, matching how
+    the 'die' effect works, so a death is never logged twice.
+    """
+    if not c.alive:
+        return
+    if c.health is None:
+        c.health = max_health(c, ct)
+    c.health = min(c.health, max_health(c, ct))
+    if c.stress >= 100:
+        harm = change_health(c, ct, -10)
+        c.stress = clamp_vital(c.stress - 20)          # the breaking point brings some release
+        if harm:
+            _log(c, "stress", f"The pressure broke something inside you ({harm:+d} health).")
+    if c.health <= 0:
+        c.alive = False
+        c.cause_of_death = "their wounds"
+
+
+def _log_death_if_needed(c: Character) -> None:
+    if not c.alive and not any(h["kind"] == "death" and h["age"] == c.age for h in c.history):
+        _log(c, "death", f"Died at age {c.age} of {c.cause_of_death}.")
 
 
 # ---------------------------------------------------------------- birth
@@ -100,6 +136,7 @@ def new_character(name: str, species_id: str, seed: int, ct: Content | None = No
     talent = roll_hidden_talent(random.Random(f"{seed}:birth:talent"), c, ct, talent_chance)
     c.hidden_talent = talent
     c.talent_state = "dormant" if talent else "none"
+    c.health = max_health(c, ct)
 
     article = "an" if sp.name[0].lower() in "aeiou" else "a"
     _log(c, "birth", f"{name} was born {article} {sp.name.lower()} in the {pretty(c.location).lower()}.")
@@ -118,14 +155,29 @@ def action_label(action_id: str, species_id: str | None = None, ct: Content | No
     ct = ct or get_content()
     if action_id.startswith("train:"):
         return f"Train {pretty(action_id.split(':', 1)[1])}"
+    if action_id.startswith("train_stat:"):
+        return f"Train {pretty(action_id.split(':', 1)[1])}"
     labels = ct.species[species_id].labels if species_id in ct.species else {}
     return labels.get(action_id) or DEFAULT_LABELS.get(action_id, pretty(action_id))
 
 
+def action_budget(c: Character, ct: Content | None = None) -> int:
+    """How many actions may be taken this year. The life stage decides."""
+    ct = ct or get_content()
+    if not c.alive:
+        return 0
+    return stage_of(c, ct).action_count
+
+
+def actions_remaining(c: Character, ct: Content | None = None) -> int:
+    ct = ct or get_content()
+    return max(0, action_budget(c, ct) - len(c.actions_taken))
+
+
 def offer_actions(c: Character, seed: int) -> list[dict]:
-    """Actions available now. The life stage decides which kinds exist."""
+    """Actions available now. The life stage decides which kinds exist and how many may be used."""
     ct = get_content()
-    if not c.alive or c.pending_event or c.action_taken:
+    if not c.alive or c.pending_event or actions_remaining(c, ct) <= 0:
         return []
     ids: list[str] = []
     for kind in stage_of(c, ct).actions:
@@ -133,6 +185,8 @@ def offer_actions(c: Character, seed: int) -> list[dict]:
             pool = trainable_skills(c, ct)
             picks = year_rng(seed, c.age, "offer").sample(pool, min(2, len(pool)))
             ids += [f"train:{s}" for s in picks]
+        elif kind == "train_stat":
+            ids += [f"train_stat:{s}" for s in STATS]
         else:
             ids.append(kind)
     return [{"id": i, "label": action_label(i, c.species_id, ct)} for i in ids]
@@ -144,37 +198,59 @@ def perform_action(c: Character, seed: int, action_id: str) -> None:
         raise NotAllowed("This character has died")
     if c.pending_event:
         raise NotAllowed("An event needs your decision first")
-    if c.action_taken:
-        raise NotAllowed("You have already acted this year")
+    if actions_remaining(c, ct) <= 0:
+        raise NotAllowed("You have used all your actions this year")
     if action_id not in {a["id"] for a in offer_actions(c, seed)}:
         raise InvalidChoice(f"Action not available: {action_id}")
 
     sp = species_of(c, ct)
-    rng = year_rng(seed, c.age, "action")
-    if action_id.startswith("train:"):
+    rng = year_rng(seed, c.age, f"action:{len(c.actions_taken)}:{action_id}")
+    if action_id.startswith("train_stat:"):
+        stat = action_id.split(":", 1)[1]
+        text = f"You drilled your {stat}."
+        if _bump(c, ct, stat, 1):
+            text = f"You trained hard and grew in {stat} (+1)."
+        stress = gain_stress(c, TRAIN_STAT_STRESS)
+        text += f" The effort wears on you (+{stress:.0f} stress)."
+    elif action_id.startswith("train:"):
         skill = action_id.split(":", 1)[1]
         gained = gain_skill(c, ct, skill, rng.uniform(1, 3))
-        text = f"Trained {pretty(skill)} (+{gained:.1f})."
+        stress = gain_stress(c, TRAIN_SKILL_STRESS)
+        text = f"Trained {pretty(skill)} (+{gained:.1f}, +{stress:.0f} stress)."
     elif action_id == "work":
         stat = rng.choice(sp.work_stats)
-        text = f"You spent the year on {action_label('work', c.species_id, ct).lower()}."
+        text = f"You spent time on {action_label('work', c.species_id, ct).lower()}."
         if rng.random() < 0.5 and _bump(c, ct, stat, 1):
             text += f" It built your {stat} (+1)."
+        stress = gain_stress(c, WORK_STRESS)
+        text += f" (+{stress:.0f} stress.)"
         if rng.random() < 0.05:
-            _bump(c, ct, "constitution", -2)
-            text += " An injury cost you some health (-2 constitution)."
+            harm = change_health(c, ct, -8)
+            if harm:
+                text += f" An injury cost you some health ({harm:+d} health)."
+            stress = gain_stress(c, 4)
     elif action_id == "rest":
-        text = "You took a quiet, restful year."
-        if rng.random() < 0.6 and _bump(c, ct, "constitution", 1):
-            text = "You rested and felt stronger (+1 constitution)."
+        before = c.stress
+        c.stress = clamp_vital(c.stress - 25)
+        relieved = before - c.stress
+        happiness = change_happiness(c, 4)
+        text = f"You took the time off and unwound (-{relieved:.0f} stress, +{happiness:.0f} happiness)."
+    elif action_id == "socialize":
+        happiness = change_happiness(c, 10)
+        text = f"You spent time with others and brightened (+{happiness:.0f} happiness)."
+        if rng.random() < 0.3 and _bump(c, ct, "charisma", 1):
+            text += " Your charm grew (+1 charisma)."
     else:  # play
         stat = rng.choice(sp.play_stats)
-        text = "You spent the year playing."
+        happiness = change_happiness(c, 6)
+        text = f"You spent time playing (+{happiness:.0f} happiness)."
         if rng.random() < 0.5 and _bump(c, ct, stat, 1):
-            text = f"Play sharpened your {stat} (+1)."
+            text += f" Play sharpened your {stat} (+1)."
 
-    c.action_taken = action_id
+    c.actions_taken.append(action_id)
     _log(c, "action", text)
+    _check_vitals(c, ct)
+    _log_death_if_needed(c)
 
 
 # ---------------------------------------------------------------- the annual turn
@@ -237,6 +313,20 @@ def _acquire_traits(c: Character, ct: Content, rng: random.Random) -> None:
                 break
 
 
+def _apply_age_up_vitals(c: Character, ct: Content) -> None:
+    """At each Age Up: the body recovers, and Happiness depletes Stress."""
+    healed = change_health(c, ct, max_health(c, ct) * (BASE_AGE_UP_HEAL + heal_bonus(c, ct)))
+    before = c.stress
+    c.stress = clamp_vital(c.stress - c.happiness / 10)
+    drained = before - c.stress
+    if healed > 0 and drained > 0:
+        _log(c, "year", f"You recover with the turning of the year (+{healed} health, -{drained:.0f} stress).")
+    elif healed > 0:
+        _log(c, "year", f"Your body mends with the turning of the year (+{healed} health).")
+    elif drained > 0:
+        _log(c, "year", f"Contentment wears down your worries (-{drained:.0f} stress).")
+
+
 def advance_turn(c: Character, seed: int) -> None:
     ct = get_content()
     if not c.alive:
@@ -245,9 +335,9 @@ def advance_turn(c: Character, seed: int) -> None:
         raise NotAllowed("An event needs your decision first")
 
     rng = year_rng(seed, c.age, "turn")
-    had_action = c.action_taken is not None
+    had_action = bool(c.actions_taken)
     c.age += 1
-    c.action_taken = None
+    c.actions_taken = []
     stage = stage_of(c, ct)
     entries_before = len(c.history)
 
@@ -259,9 +349,15 @@ def advance_turn(c: Character, seed: int) -> None:
     if rng.random() < stage.aging_chance and _bump(c, ct, "constitution", -1):
         _log(c, "aging", "The years weigh on you (-1 constitution).")
 
+    _apply_age_up_vitals(c, ct)
+
     if rng.random() < death_chance(c, ct):
         fraction = c.age / species_of(c, ct).lifespan
         _die(c, "old age" if fraction > 0.75 else "illness")
+        return
+    _check_vitals(c, ct)
+    _log_death_if_needed(c)
+    if not c.alive:
         return
 
     check_awakening(c, seed, ct)
@@ -324,13 +420,14 @@ def resolve_event(c: Character, seed: int, event_id: str, choice_id: str) -> Non
 
     c.pending_event = None
     apply_effects(effects, c, ct, rng, notes)
+    _check_vitals(c, ct)
     text = f"{event.title}: {result}"
     if notes:
         text += f" ({', '.join(notes)})"
     _log(c, "event", text, event_id=event_id)
 
     if not c.alive:
-        _log(c, "death", f"Died at age {c.age} of {c.cause_of_death}.")
+        _log_death_if_needed(c)
         return
     check_awakening(c, seed, ct)
     if c.pending_event is None and c.queued_events:
@@ -351,6 +448,13 @@ def repair(c: Character) -> Character:
         c.axes.setdefault(axis, 0)
     if c.location not in species_of(c, ct).habitats and not c.location:
         c.location = species_of(c, ct).habitats[0]
+    # Vitals were added later: old saves start healthy, calm and content.
+    if c.health is None:
+        c.health = max_health(c, ct)
+    else:
+        c.health = max(0, min(max_health(c, ct), c.health))
+    c.stress = clamp_vital(c.stress)
+    c.happiness = clamp_vital(c.happiness)
     return c
 
 

@@ -10,7 +10,10 @@ from . import engine as sim
 from .content import STATS, get_content
 from .db import get_session, init_db
 from .models import Campaign, CharacterRecord
-from .rules import alignment_label, effective_stat, species_of, stage_of, pretty
+from .rules import (
+    alignment_label, describe_trait_effects, effective_stat, max_health, pretty, species_of,
+    stage_name, stage_of,
+)
 from .schemas import (
     AxisRead, CampaignCreate, CampaignRead, CharacterRead, HistoryEntryRead, ItemRead,
     OptionRead, PendingEventRead, SpeciesBrief, SpeciesRead, StageRead, TalentRead, TraitRead,
@@ -58,7 +61,8 @@ def _active(session: Session) -> tuple[Campaign, CharacterRecord]:
 
 def _trait_read(ct, trait_id: str) -> TraitRead:
     t = ct.traits[trait_id]
-    return TraitRead(id=t.id, name=t.name, description=t.description, tier=t.tier)
+    return TraitRead(id=t.id, name=t.name, description=t.description, tier=t.tier,
+                     effects=describe_trait_effects(t, ct))
 
 
 def _character_read(rec: CharacterRecord) -> CharacterRead:
@@ -82,10 +86,19 @@ def _character_read(rec: CharacterRecord) -> CharacterRead:
     return CharacterRead(
         id=rec.id, campaign_id=rec.campaign_id, name=c.name,
         species=SpeciesBrief(id=sp.id, name=sp.name, category=sp.category),
-        stage=StageRead(id=stage.id, name=stage.name, description=stage.description),
+        species_description=sp.description,
+        species_stat_modifiers=sp.stat_modifiers,
+        stage=StageRead(id=stage.id, name=stage_name(sp, stage), description=stage.description),
         location=c.location, age=c.age, alive=c.alive,
         stats=c.stats, effective_stats={s: effective_stat(c, ct, s) for s in STATS},
-        stat_cap=sp.stat_cap, skills=c.skills,
+        stat_cap=sp.stat_cap,
+        health=c.health if c.health is not None else max_health(c, ct),
+        max_health=max_health(c, ct),
+        stress=c.stress, happiness=c.happiness,
+        action_budget=sim.action_budget(c, ct),
+        actions_remaining=sim.actions_remaining(c, ct),
+        actions_taken_labels=[sim.action_label(a, c.species_id, ct) for a in c.actions_taken],
+        skills=c.skills,
         traits=[_trait_read(ct, t) for t in c.traits if t in ct.traits],
         axes=[AxisRead(id=a.id, name=a.name, group=a.group, low=a.low, high=a.high, value=c.axes.get(a.id, 0))
               for a in ct.axes.values()],
@@ -94,8 +107,6 @@ def _character_read(rec: CharacterRecord) -> CharacterRead:
                for i, n in sorted(c.items.items()) if i in ct.items and n > 0],
         talent=talent,
         cause_of_death=c.cause_of_death,
-        action_taken=c.action_taken,
-        action_taken_label=sim.action_label(c.action_taken, c.species_id, ct) if c.action_taken else None,
         pending_event=pending,
         summary=None if c.alive else sim.summarize(c),
     )
