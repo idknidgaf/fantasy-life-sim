@@ -6,7 +6,7 @@ import DeathSummary from './components/DeathSummary'
 import EventLog from './components/EventLog'
 import EventPanel from './components/EventPanel'
 import StartScreen from './components/StartScreen'
-import type { Campaign, Character, HistoryEntry, Option } from './types'
+import type { Campaign, Character, HistoryEntry, Option, Species } from './types'
 
 /** Everything the game screen needs, fetched from the active campaign. */
 async function loadActive() {
@@ -21,6 +21,7 @@ async function loadActive() {
 export default function App() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [skillCategories, setSkillCategories] = useState<Record<string, string>>({})
+  const [species, setSpecies] = useState<Species[]>([])
   const [character, setCharacter] = useState<Character | null>(null)
   const [actions, setActions] = useState<Option[]>([])
   const [history, setHistory] = useState<HistoryEntry[]>([])
@@ -35,12 +36,14 @@ export default function App() {
     let cancelled = false
     async function init() {
       try {
-        const [skills, list] = await Promise.all([
+        const [skills, speciesList, list] = await Promise.all([
           api.getSkills().catch(() => ({}) as Record<string, string>),
+          api.getSpecies(),
           api.listCampaigns(),
         ])
         if (cancelled) return
         setSkillCategories(skills)
+        setSpecies(speciesList)
         setCampaigns(list)
         if (list.some((c) => c.active)) {
           const s = await loadActive()
@@ -86,14 +89,14 @@ export default function App() {
   /** Run a change on the active character, then refresh the screen and show stat deltas. */
   const change = (call: () => Promise<unknown>) =>
     guard(async () => {
-      const before = character?.stats ?? null
+      const before = character?.effective_stats ?? null
       await call()
       await showActive(before)
     })
 
-  const createCampaign = (name: string, seed?: number) =>
+  const createCampaign = (name: string, speciesId: string, seed?: number) =>
     guard(async () => {
-      await api.createCampaign(name, seed)
+      await api.createCampaign(name, speciesId, seed)
       await showActive()
     })
 
@@ -142,6 +145,7 @@ export default function App() {
       ) : inMenu || !character ? (
         <StartScreen
           campaigns={campaigns}
+          species={species}
           busy={busy}
           onCreate={createCampaign}
           onOpen={openCampaign}

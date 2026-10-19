@@ -1,0 +1,87 @@
+# A HIDDEN TALENT is potential that must be discovered.
+#   Rolled ONCE at birth (1% chance) from the pool of talents whose `eligible` requirements pass,
+#   then saved. It is never rerolled, and never shown while dormant.
+#   hints      vague lines that occasionally appear in the life story while the talent is dormant
+#   awaken     the unlock condition: a minimum life stage plus requirements
+#   on_awaken  narrative, effects, and an optional story event to trigger
+- id: master_of_none
+  name: Master of None
+  description: A character who learns many skills instead of specialising unlocks a generalist route.
+  weight: 3
+  hints:
+    - You pick up a new knack almost as fast as you set the last one down.
+    - Teachers say you could be good at anything, if only you would choose one thing.
+  awaken:
+    min_stage: young_adult
+    requirements: [{skill_count: 8, min_level: 3}, {max_top_skill: 30}]
+  on_awaken:
+    narrative: Everything you have ever dabbled in suddenly fits together, as if every road were the same road seen from different hills.
+    effects:
+      - grant_trait: generalist
+      - stat_delta: {wisdom: 3}
+    trigger_event: master_of_none_path
+
+- id: divine_favor
+  name: Divine Favor
+  description: Extraordinary blessings become possible after a life of devotion and sacrifice.
+  weight: 2
+  eligible: [{species_category: humanoid}]
+  hints:
+    - For a moment you feel watched over, and it is not unpleasant.
+    - Candles near you burn a little steadier than they should.
+  awaken:
+    min_stage: adolescence
+    requirements: [{counter: selfless_acts, min: 3}, {axis: good_evil, min: 20}]
+  on_awaken:
+    narrative: After a lifetime of giving yourself away, something answers. Light gathers at the edge of your sight.
+    effects:
+      - grant_trait: blessed
+    trigger_event: divine_favor_path
+
+- id: worlds_adversary
+  name: World's Adversary
+  description: Surviving repeated encounters with overwhelming enemies unlocks a special anti-monster path.
+  weight: 2
+  hints:
+    - Animals watch you a little too carefully.
+    - You dream of enormous things moving in the dark.
+  awaken:
+    min_stage: adolescence
+    requirements: [{counter: overwhelming_foe, min: 3}]
+  on_awaken:
+    narrative: You have stood before things that should have ended you, and lived. Now monsters seem to know your name.
+    effects:
+      - grant_trait: adversary_instinct
+    trigger_event: worlds_adversary_path
+
+- id: primordial_origin
+  name: Primordial Origin
+  description: A magical creature discovers an ancient source of power tied to its element or species.
+  weight: 2
+  eligible: [{species_category: monstrous}]
+  hints:
+    - Something under your skin hums in the quiet hours.
+    - Wild places feel strangely like home.
+  awaken:
+    min_stage: adolescence
+    requirements: [{flag: touched_primal_source}]
+  on_awaken:
+    narrative: The power you touched did not fade. It has been waiting inside you all along, patient and very old.
+    effects:
+      - grant_trait: primal_spark
+    trigger_event: primordial_origin_path
+
+- id: unbroken_will
+  name: Unbroken Will
+  description: Overcoming repeated mental or spiritual trials unlocks a unique resistance ability.
+  weight: 2
+  hints:
+    - You find, oddly, that fear does not take hold the way it does in others.
+    - Whispers that unsettle your peers seem like background noise to you.
+  awaken:
+    min_stage: adolescence
+    requirements: [{counter: mental_trials, min: 3}, {skill: willpower, min_level: 8}]
+  on_awaken:
+    narrative: You have been tested again and again, and have not broken. You understand now that you cannot be.
+    effects:
+      - grant_trait: steel_resolve

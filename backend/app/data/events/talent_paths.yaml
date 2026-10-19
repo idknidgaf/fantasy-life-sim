@@ -1,0 +1,96 @@
+# Story events launched by awakening a hidden talent. They are never picked at random (trigger_only).
+
+- id: master_of_none_path
+  title: The Many Roads
+  trigger_only: true
+  weight: 0
+  narrative: >
+    Everything you have ever dabbled in suddenly seems to be part of one pattern. You can see how far each road could go.
+  choices:
+    - id: weave
+      text: Weave your skills together
+      result: The pieces lock into place. You are not a master of one thing, but of how things connect.
+      effects:
+        - skill_xp: {mental: 3}
+        - skill_xp: {crafting: 3}
+        - stat_delta: {wisdom: 2}
+        - flag: generalist_weaver
+    - id: wander
+      text: Keep wandering and learning
+      result: Why choose, when everything is interesting?
+      effects:
+        - skill_xp: {survival: 3}
+        - skill_xp: {social: 3}
+        - axis_delta: {curiosity: 8}
+        - flag: generalist_wanderer
+
+- id: divine_favor_path
+  title: A Voice in the Quiet
+  trigger_only: true
+  weight: 0
+  narrative: >
+    Light gathers at the edge of your vision, and a presence, vast and unhurried, waits for your answer.
+  choices:
+    - id: devote
+      text: Devote yourself fully
+      result: You give yourself to something larger than you, and it gives you back more than you gave.
+      effects:
+        - flag: divine_servant
+        - skill_xp: {divine_power: 4}
+        - axis_delta: {good_evil: 6, law_chaos: 4}
+    - id: accept
+      text: Accept the gift quietly
+      result: You keep it to yourself and let it work through you in small, steady ways.
+      effects:
+        - skill_xp: {divine_power: 2}
+        - stat_delta: {wisdom: 1}
+    - id: refuse
+      text: Refuse the attention
+      result: The light fades. You are not sure you did the right thing.
+      effects:
+        - axis_delta: {law_chaos: -5}
+        - stat_delta: {wisdom: 1}
+
+- id: worlds_adversary_path
+  title: Marked by Monsters
+  trigger_only: true
+  weight: 0
+  narrative: >
+    Creatures of power seem to know you now, and you can feel them too, like pressure on the edge of hearing.
+  choices:
+    - id: hunt
+      text: Hunt what hunts you
+      result: You turn your fear into a weapon.
+      effects:
+        - flag: monster_hunter
+        - skill_xp: {tactics: 3}
+        - axis_delta: {bravery: 8}
+    - id: study
+      text: Study them carefully
+      result: Knowing your enemy is half the battle, and you intend to win it.
+      effects:
+        - skill_xp: {knowledge: 3}
+        - skill_xp: {tactics: 2}
+
+- id: primordial_origin_path
+  title: The First Source
+  trigger_only: true
+  weight: 0
+  narrative: >
+    The power you touched has not faded. It has been waiting for someone to listen, and now it speaks.
+  choices:
+    - id: embrace
+      text: Embrace the source
+      result: You open yourself wide, and ancient power pours in.
+      effects:
+        - flag: primordial_embraced
+        - skill_xp: {elemental_magic: 5}
+        - skill_xp: {soul_control: 3}
+        - stat_delta: {strength: 2}
+    - id: shape
+      text: Shape it with discipline
+      result: Slow and careful, you teach the power how to behave.
+      effects:
+        - skill_xp: {willpower: 3}
+        - skill_xp: {concentration: 3}
+        - axis_delta: {discipline: 6}

@@ -1,0 +1,91 @@
+# A SPECIES is the rulebook for a kind of being. A CHARACTER is one individual of a species.
+#   stat_modifiers  added to the birth stat roll (20-60)
+#   skill_aptitude  xp multipliers, keyed by skill id, skill category, or "all"
+#   innate_skills   starting skill levels; also unlocks "supernatural" skills for training
+#   allowed_skills  if present, the ONLY skills this species can train
+#   tags            used by events (speaker, tool_user, predator, pack_animal, amorphous, draconic...)
+#   habitats        possible birth locations
+#   event_rate      multiplier on the yearly event chance (short-lived species pack more into each year)
+- id: human
+  name: Human
+  category: humanoid
+  description: Adaptable and ambitious. Humans live briefly but learn quickly, and can follow almost any path.
+  lifespan: 80
+  skill_aptitude: {all: 1.1}
+  tags: [speaker, tool_user]
+  habitats: [village, city]
+
+- id: elf
+  name: Elf
+  category: humanoid
+  description: Graceful, perceptive and long-lived. Elves are gifted with magic and the wild, but frail and slow to mature.
+  lifespan: 120
+  stat_modifiers: {dexterity: 8, wisdom: 6, constitution: -4, strength: -4}
+  skill_aptitude: {magic: 1.25, survival: 1.1}
+  innate_traits: [keen_sense]
+  tags: [speaker, tool_user, long_lived]
+  habitats: [ancient_forest, village]
+  axis_bias: {curiosity: 10, discipline: 5}
+
+- id: dwarf
+  name: Dwarf
+  category: humanoid
+  description: Stubborn, sturdy and masterful with stone and steel. Dwarves are hard to kill and harder to persuade.
+  lifespan: 110
+  stat_modifiers: {constitution: 10, strength: 8, dexterity: -4, charisma: -4}
+  skill_aptitude: {crafting: 1.3, combat: 1.05}
+  innate_traits: [iron_constitution]
+  tags: [speaker, tool_user]
+  habitats: [mountain_hold, cavern]
+  axis_bias: {discipline: 10, law_chaos: 10}
+
+- id: wolf
+  name: Wolf
+  category: beast
+  description: A hunter of forest and tundra. Wolves live fast, feel everything through scent and instinct, and cannot read, bargain or wield a sword.
+  lifespan: 14
+  base_mortality: 0.01
+  event_rate: 1.6
+  stat_modifiers: {dexterity: 10, strength: 4, constitution: 4, wisdom: -8, charisma: -15}
+  skill_aptitude: {survival: 1.3, tracking: 1.3, stealth: 1.2}
+  innate_skills: {tracking: 3, beast_instinct: 2}
+  innate_traits: [fleet_footwork]
+  allowed_skills: [tracking, stealth, survival, exploration, beast_instinct, willpower, concentration, mental_resistance, intimidation, command]
+  tags: [predator, pack_animal, keen_nose]
+  habitats: [ancient_forest, tundra]
+  axis_bias: {sociability: 10, bravery: 5}
+  labels: {work: Hunt and forage, play: Wrestle with your littermates, rest: Curl up and rest}
+  work_stats: [strength, dexterity, constitution]
+  play_stats: [dexterity, strength, wisdom]
+
+- id: slime
+  name: Slime
+  category: monstrous
+  description: A boneless, hungry, strangely thoughtful mass. Slimes are tough and regenerate, but weak, brief, and almost unable to charm anyone.
+  lifespan: 40
+  base_mortality: 0.003
+  event_rate: 1.3
+  stat_modifiers: {constitution: 15, strength: -5, dexterity: -5, wisdom: -5, charisma: -20}
+  skill_aptitude: {survival: 1.2, alchemy: 1.4, soul_control: 1.3}
+  innate_skills: {soul_control: 1}
+  innate_traits: [regenerative]
+  allowed_skills: [survival, exploration, stealth, elemental_magic, spirit_magic, alchemy, soul_control, mental_resistance, willpower, concentration, knowledge]
+  tags: [amorphous, regenerating]
+  habitats: [cavern, swamp]
+  labels: {work: Absorb and digest, play: Ooze about, rest: Settle into a puddle}
+  work_stats: [constitution, wisdom, dexterity]
+  play_stats: [dexterity, wisdom, constitution]
+
+- id: dragonkin
+  name: Dragonkin
+  category: monstrous
+  description: Scaled heirs of ancient dragons. Dragonkin are powerful, long-lived and can grow beyond the mortal limit, but are driven by hungers older than they are.
+  lifespan: 160
+  stat_cap: 120
+  stat_modifiers: {strength: 10, constitution: 10, charisma: 5, dexterity: -2}
+  skill_aptitude: {supernatural: 1.3, combat: 1.1}
+  innate_skills: {draconic_mastery: 2}
+  innate_traits: [draconic_scales]
+  tags: [speaker, tool_user, draconic]
+  habitats: [mountain_peak, mountain_hold]
+  axis_bias: {bravery: 10, law_chaos: -5}

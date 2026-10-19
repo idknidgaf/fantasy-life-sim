@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 class CampaignCreate(BaseModel):
     character_name: str = Field(min_length=1, max_length=40)
+    species: str = "human"
     campaign_name: str | None = Field(default=None, max_length=60)
     seed: int | None = None
 
@@ -13,6 +14,8 @@ class CampaignCreate(BaseModel):
 class OptionRead(BaseModel):
     id: str
     label: str
+    available: bool = True
+    requirement: str | None = None        # why it is locked, if it is
 
 
 class PendingEventRead(BaseModel):
@@ -22,19 +25,80 @@ class PendingEventRead(BaseModel):
     choices: list[OptionRead]
 
 
+class TraitRead(BaseModel):
+    id: str
+    name: str
+    description: str
+    tier: str
+
+
+class SpeciesBrief(BaseModel):
+    id: str
+    name: str
+    category: str
+
+
+class SpeciesRead(SpeciesBrief):
+    description: str
+    lifespan: int
+    stat_cap: int
+    stat_modifiers: dict[str, int]
+    tags: list[str]
+    traits: list[TraitRead]
+    habitats: list[str]
+
+
+class StageRead(BaseModel):
+    id: str
+    name: str
+    description: str
+
+
+class AxisRead(BaseModel):
+    id: str
+    name: str
+    group: str
+    low: str
+    high: str
+    value: int
+
+
+class ItemRead(BaseModel):
+    id: str
+    name: str
+    description: str
+    count: int
+
+
+class TalentRead(BaseModel):
+    id: str
+    name: str
+    description: str
+
+
 class CharacterRead(BaseModel):
     id: int
     campaign_id: int
     name: str
+    species: SpeciesBrief
+    stage: StageRead
+    location: str
     age: int
     alive: bool
-    stats: dict[str, int]
+    stats: dict[str, int]                 # base stats
+    effective_stats: dict[str, int]       # base + trait bonuses
+    stat_cap: int
     skills: dict[str, float]
+    traits: list[TraitRead]
+    axes: list[AxisRead]
+    alignment: str
+    items: list[ItemRead]
+    talent: TalentRead | None             # ONLY once awakened; a dormant talent is never exposed
     cause_of_death: str | None
     action_taken: str | None
     action_taken_label: str | None
     pending_event: PendingEventRead | None
-    summary: dict | None          # filled in once the character has died
+    summary: dict | None                  # filled in once the character has died
 
 
 class CampaignRead(BaseModel):

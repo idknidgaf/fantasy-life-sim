@@ -1,0 +1,72 @@
+# Life stages. `starts_at` is in HUMAN-EQUIVALENT years: a species' real age is scaled by
+# (80 / lifespan) first, so a wolf (lifespan 14) reaches adolescence at 2 and an elf
+# (lifespan 120) at 18. Events should use min_stage/max_stage rather than raw ages.
+- id: infancy
+  name: Infancy
+  starts_at: 0
+  description: Life happens to you. You are far too young to decide anything, but these first years shape who you become.
+  actions: []
+  train_categories: []
+  growth_chance: 0.35
+  event_chance: 0.30
+
+- id: early_childhood
+  name: Early childhood
+  starts_at: 3
+  description: You are learning to walk, talk and wander. The world is enormous and mostly unsupervised.
+  actions: [play]
+  train_categories: []
+  growth_chance: 0.30
+  event_chance: 0.30
+
+- id: childhood
+  name: Childhood
+  starts_at: 6
+  description: Play turns into practice. You begin to find out what you are good at.
+  actions: [train, play, rest]
+  train_categories: [survival, mental, social, crafting]
+  growth_chance: 0.30
+  event_chance: 0.35
+
+- id: adolescence
+  name: Adolescence
+  starts_at: 12
+  description: Your body and your ambitions are growing faster than your sense. Doors are starting to open.
+  actions: [train, work, rest]
+  train_categories: [all]
+  growth_chance: 0.30
+  event_chance: 0.40
+
+- id: young_adult
+  name: Young adulthood
+  starts_at: 18
+  description: The world is yours to make something of, or to be crushed by.
+  actions: [train, work, rest]
+  train_categories: [all]
+  event_chance: 0.35
+
+- id: adulthood
+  name: Adulthood
+  starts_at: 30
+  description: Your path is mostly set, and the consequences of earlier choices begin to arrive.
+  actions: [train, work, rest]
+  train_categories: [all]
+  event_chance: 0.30
+
+- id: middle_age
+  name: Middle age
+  starts_at: 50
+  description: Strength begins to fade, but experience counts for more.
+  actions: [train, work, rest]
+  train_categories: [all]
+  aging_chance: 0.50
+  event_chance: 0.30
+
+- id: elder
+  name: Elder
+  starts_at: 65
+  description: Your years are numbered. What will you leave behind?
+  actions: [train, rest]
+  train_categories: [all]
+  aging_chance: 0.60
+  event_chance: 0.30

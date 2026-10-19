@@ -1,0 +1,8 @@
+# Personality axes and alignment axes. Values run from -100 (low) to +100 (high).
+- {id: bravery,     name: Bravery,     group: personality, low: Timid,      high: Bold}
+- {id: curiosity,   name: Curiosity,   group: personality, low: Incurious,  high: Curious}
+- {id: sociability, name: Sociability, group: personality, low: Reserved,   high: Outgoing}
+- {id: discipline,  name: Discipline,  group: personality, low: Impulsive,  high: Disciplined}
+# The two alignment axes combine into a label such as "Lawful Good". Both are required.
+- {id: law_chaos,   name: Order,       group: alignment,   low: Chaotic,    high: Lawful}
+- {id: good_evil,   name: Morality,    group: alignment,   low: Evil,       high: Good}

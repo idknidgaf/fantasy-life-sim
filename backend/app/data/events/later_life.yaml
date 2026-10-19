@@ -1,0 +1,147 @@
+# Adulthood, middle age and the elder years.
+
+- id: apprentice_request
+  title: A Request for Guidance
+  weight: 3
+  once: true
+  narrative: >
+    A young, earnest stranger asks to learn from you. They have clearly been working up the nerve for days.
+  conditions:
+    min_stage: adulthood
+    species_tags: [speaker, tool_user]
+  choices:
+    - id: accept
+      text: Take them on as an apprentice
+      result: Teaching turns out to teach you as much as it does them.
+      effects:
+        - flag: has_apprentice
+        - skill_xp: {command: 2}
+        - counter: {selfless_acts: 1}
+        - axis_delta: {good_evil: 3}
+    - id: test
+      text: Test their resolve first
+      check: {stat: wisdom, difficulty: 40}
+      success:
+        result: You find exactly what you hoped for, and a student worth the trouble.
+        effects:
+          - flag: has_apprentice
+          - skill_xp: {command: 1.5}
+          - stat_delta: {wisdom: 1}
+      failure:
+        result: They quit in a huff, and you are left wondering if you were too hard.
+        effects:
+          - axis_delta: {sociability: -2}
+    - id: refuse
+      text: Politely refuse
+      result: They thank you and leave. You feel nothing in particular.
+      effects:
+        - axis_delta: {good_evil: -1}
+
+- id: old_wounds
+  title: Old Wounds
+  weight: 3
+  narrative: >
+    The injuries of earlier years have started to ache in cold weather and sleepless nights.
+  conditions:
+    min_stage: middle_age
+  choices:
+    - id: push
+      text: Push through the pain
+      check: {stat: constitution, difficulty: 40}
+      success:
+        result: You refuse to let your body make the decision for you.
+        effects:
+          - skill_xp: {willpower: 1.5}
+          - counter: {mental_trials: 1}
+      failure:
+        result: Pushing too hard makes things worse.
+        effects:
+          - stat_delta: {constitution: -2}
+    - id: rest
+      text: Rest and recover
+      result: A quiet season does you good.
+      effects:
+        - stat_delta: {constitution: 1}
+          chance: 0.5
+    - id: salve
+      text: Use your healing salve
+      requirements:
+        - item: healing_salve
+      result: The pain recedes like a tide.
+      effects:
+        - consume_item: {id: healing_salve}
+        - stat_delta: {constitution: 2}
+
+- id: elder_reflection
+  title: Looking Back
+  weight: 3
+  once: true
+  narrative: >
+    On a still evening you realise that you have more years behind you than ahead. What do you want to do with the rest?
+  conditions:
+    min_stage: elder
+    species_tags: [speaker]
+  choices:
+    - id: share
+      text: Pass on what you have learned
+      result: People listen, and some even remember.
+      effects:
+        - stat_delta: {charisma: 1}
+        - axis_delta: {good_evil: 3, sociability: 4}
+    - id: adventure
+      text: Set out on one last adventure
+      check: {stat: constitution, difficulty: 40}
+      success:
+        result: Your knees complain the whole way, but you come home glowing.
+        effects:
+          - axis_delta: {bravery: 8}
+          - skill_xp: {exploration: 3}
+          - stat_delta: {strength: 1}
+      failure:
+        result: The road is crueller than you remembered.
+        effects:
+          - stat_delta: {constitution: -3}
+          - die: {cause: one last adventure}
+            chance: 0.15
+    - id: rest
+      text: Rest by the fire
+      result: Peace, at last.
+      effects:
+        - stat_delta: {constitution: 1}
+
+- id: last_hunt
+  title: The Last Hunt
+  weight: 3
+  once: true
+  narrative: >
+    Your legs are slower and your muzzle is grey. The pack looks to you, out of habit, or out of respect.
+  conditions:
+    min_stage: elder
+    species_tags: [predator]
+  choices:
+    - id: lead
+      text: Lead the hunt one last time
+      check: {stat: strength, difficulty: 45}
+      success:
+        result: A clean, glorious chase. The pack will tell the story for generations.
+        effects:
+          - skill_xp: {command: 3}
+          - stat_delta: {wisdom: 1}
+      failure:
+        result: The quarry turns on you.
+        effects:
+          - stat_delta: {constitution: -3}
+          - die: {cause: the last hunt}
+            chance: 0.2
+    - id: teach
+      text: Teach the young ones
+      result: You show them everything you know.
+      effects:
+        - skill_xp: {command: 2}
+        - axis_delta: {sociability: 3}
+    - id: retire
+      text: Stay behind in the den
+      result: Warm, safe, and a little ashamed.
+      effects:
+        - stat_delta: {constitution: 1}
+          chance: 0.5

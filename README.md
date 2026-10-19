@@ -1,6 +1,7 @@
 # Fantasy Life Sim
 
-Run the backend:   cd backend && .venv\Scripts\activate && fastapi dev app/main.py
-Run the frontend:  cd frontend && npm run dev
-API docs (auto):   http://localhost:8000/docs
-Run the tests:     cd backend && python -m pytest -v
+Backend:   cd backend && .venv\Scripts\activate && pip install -r requirements.txt && fastapi dev app/main.py
+Frontend:  cd frontend && npm run dev
+API docs:  http://localhost:8000/docs
+Tests:     cd backend && python -m pytest -v
+Content:   cd backend && python -m app.validate_content      (see docs/CONTENT_GUIDE.md)

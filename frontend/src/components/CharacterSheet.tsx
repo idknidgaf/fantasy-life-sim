@@ -1,5 +1,6 @@
-import { STAT_INFO, lifeStage, pretty } from '../format'
+import { STAT_INFO, pretty } from '../format'
 import type { Character } from '../types'
+import AxisBar from './AxisBar'
 
 interface Props {
   character: Character
@@ -9,41 +10,87 @@ interface Props {
 
 export default function CharacterSheet({ character, prevStats, skillCategories }: Props) {
   const skills = Object.entries(character.skills).sort((a, b) => b[1] - a[1])
+  const personality = character.axes.filter((a) => a.group === 'personality')
+  const alignment = character.axes.filter((a) => a.group === 'alignment')
 
   return (
     <section className="card">
       <header className="sheet-head">
         <h2>{character.name}</h2>
         <p className="muted">
-          {character.alive
-            ? `Age ${character.age} · ${lifeStage(character.age)}`
-            : `Died at age ${character.age}`}
+          {character.species.name} · {character.alive ? `Age ${character.age}` : `Died at age ${character.age}`} ·{' '}
+          {character.stage.name}
         </p>
+        <p className="muted small">Home: {pretty(character.location)}</p>
       </header>
+
+      {character.talent && (
+        <div className="talent-banner" title={character.talent.description}>
+          <strong>✦ Awakened: {character.talent.name}</strong>
+          <span>{character.talent.description}</span>
+        </div>
+      )}
 
       <h3>Attributes</h3>
       <ul className="stats">
         {Object.entries(STAT_INFO).map(([key, info]) => {
-          const value = character.stats[key] ?? 0
+          const value = character.effective_stats[key] ?? 0
+          const bonus = value - (character.stats[key] ?? value)
           const delta = prevStats ? value - (prevStats[key] ?? value) : 0
           return (
             <li key={key} title={info.hint}>
               <span className="stat-name">{info.label}</span>
               <span className="bar">
-                <span className="bar-fill" style={{ width: `${Math.min(100, value)}%` }} />
+                <span
+                  className="bar-fill"
+                  style={{ width: `${Math.min(100, (value / character.stat_cap) * 100)}%` }}
+                />
               </span>
               <span className="stat-value">
                 {value}
+                {bonus !== 0 && <small className="muted" title="From traits"> ({bonus > 0 ? '+' : ''}{bonus})</small>}
                 {delta !== 0 && (
-                  <span className={delta > 0 ? 'delta up' : 'delta down'}>
-                    {delta > 0 ? `+${delta}` : delta}
-                  </span>
+                  <span className={delta > 0 ? 'delta up' : 'delta down'}>{delta > 0 ? `+${delta}` : delta}</span>
                 )}
               </span>
             </li>
           )
         })}
       </ul>
+      {character.stat_cap > 100 && <p className="muted small">Your kind can grow beyond the mortal limit (cap {character.stat_cap}).</p>}
+
+      <h3>Traits</h3>
+      {character.traits.length === 0 ? (
+        <p className="muted">No notable traits yet.</p>
+      ) : (
+        <ul className="chips">
+          {character.traits.map((t) => (
+            <li key={t.id} className={`trait tier-${t.tier}`} title={`${t.description} (${t.tier})`}>
+              {t.name}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <h3>Personality</h3>
+      <ul className="axes">{personality.map((a) => <AxisBar key={a.id} axis={a} />)}</ul>
+
+      <h3>Alignment · {character.alignment}</h3>
+      <ul className="axes">{alignment.map((a) => <AxisBar key={a.id} axis={a} />)}</ul>
+
+      {character.items.length > 0 && (
+        <>
+          <h3>Belongings</h3>
+          <ul className="chips">
+            {character.items.map((i) => (
+              <li key={i.id} className="item" title={i.description}>
+                {i.name}
+                {i.count > 1 ? ` ×${i.count}` : ''}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
 
       <h3>Skills</h3>
       {skills.length === 0 ? (

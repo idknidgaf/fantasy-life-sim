@@ -7,16 +7,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, select
 
 from . import engine as sim
+from .content import STATS, get_content
 from .db import get_session, init_db
 from .models import Campaign, CharacterRecord
+from .rules import alignment_label, effective_stat, species_of, stage_of, pretty
 from .schemas import (
-    CampaignCreate, CampaignRead, CharacterRead, HistoryEntryRead, OptionRead,
-    PendingEventRead,
+    AxisRead, CampaignCreate, CampaignRead, CharacterRead, HistoryEntryRead, ItemRead,
+    OptionRead, PendingEventRead, SpeciesBrief, SpeciesRead, StageRead, TalentRead, TraitRead,
 )
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    get_content()          # fail fast if any content file is invalid
     init_db()
     yield
 
@@ -53,20 +56,46 @@ def _active(session: Session) -> tuple[Campaign, CharacterRecord]:
     return campaign, record
 
 
+def _trait_read(ct, trait_id: str) -> TraitRead:
+    t = ct.traits[trait_id]
+    return TraitRead(id=t.id, name=t.name, description=t.description, tier=t.tier)
+
+
 def _character_read(rec: CharacterRecord) -> CharacterRead:
-    c = rec.to_character()
+    ct = get_content()
+    c = sim.repair(rec.to_character())
+    sp = species_of(c, ct)
+    stage = stage_of(c, ct)
+
     pending = None
     if c.pending_event:
-        ev = sim.load_events()[c.pending_event]
+        ev = ct.events[c.pending_event]
         pending = PendingEventRead(
-            id=ev["id"], title=ev["title"], text=ev["text"],
-            choices=[OptionRead(id=ch["id"], label=ch["label"]) for ch in ev["choices"]],
+            id=ev.id, title=ev.title, text=ev.narrative.strip(),
+            choices=[OptionRead(**o) for o in sim.event_choice_state(c, ct, ev.id)],
         )
+    talent = None
+    if c.talent_state == "awakened" and c.hidden_talent:        # a dormant talent must never leak
+        t = ct.talents[c.hidden_talent]
+        talent = TalentRead(id=t.id, name=t.name, description=t.description)
+
     return CharacterRead(
-        id=rec.id, campaign_id=rec.campaign_id, name=c.name, age=c.age, alive=c.alive,
-        stats=c.stats, skills=c.skills, cause_of_death=c.cause_of_death,
+        id=rec.id, campaign_id=rec.campaign_id, name=c.name,
+        species=SpeciesBrief(id=sp.id, name=sp.name, category=sp.category),
+        stage=StageRead(id=stage.id, name=stage.name, description=stage.description),
+        location=c.location, age=c.age, alive=c.alive,
+        stats=c.stats, effective_stats={s: effective_stat(c, ct, s) for s in STATS},
+        stat_cap=sp.stat_cap, skills=c.skills,
+        traits=[_trait_read(ct, t) for t in c.traits if t in ct.traits],
+        axes=[AxisRead(id=a.id, name=a.name, group=a.group, low=a.low, high=a.high, value=c.axes.get(a.id, 0))
+              for a in ct.axes.values()],
+        alignment=alignment_label(c),
+        items=[ItemRead(id=i, name=ct.items[i].name, description=ct.items[i].description, count=n)
+               for i, n in sorted(c.items.items()) if i in ct.items and n > 0],
+        talent=talent,
+        cause_of_death=c.cause_of_death,
         action_taken=c.action_taken,
-        action_taken_label=sim.action_label(c.action_taken) if c.action_taken else None,
+        action_taken_label=sim.action_label(c.action_taken, c.species_id, ct) if c.action_taken else None,
         pending_event=pending,
         summary=None if c.alive else sim.summarize(c),
     )
@@ -84,7 +113,7 @@ def _campaign_read(session: Session, campaign: Campaign) -> CampaignRead:
 def _mutate(session: Session, change: Callable[[sim.Character, int], None]) -> CharacterRead:
     """Load the active character, apply a rule from the engine, save, return it."""
     campaign, rec = _active(session)
-    c = rec.to_character()
+    c = sim.repair(rec.to_character())
     try:
         change(c, campaign.seed)
     except sim.InvalidChoice as e:
@@ -98,20 +127,46 @@ def _mutate(session: Session, change: Callable[[sim.Character, int], None]) -> C
     return _character_read(rec)
 
 
+# ---------- reference data ----------
+
+@api.get("/species", response_model=list[SpeciesRead])
+def list_species():
+    ct = get_content()
+    return [
+        SpeciesRead(
+            id=s.id, name=s.name, category=s.category, description=s.description,
+            lifespan=s.lifespan, stat_cap=s.stat_cap, stat_modifiers=s.stat_modifiers,
+            tags=[pretty(t) for t in s.tags], habitats=s.habitats,
+            traits=[_trait_read(ct, t) for t in s.innate_traits],
+        )
+        for s in ct.species.values()
+    ]
+
+
+@api.get("/skills")
+def get_skills():
+    """{skill_id: category}, straight from skills.json."""
+    return get_content().skills
+
+
 # ---------- campaigns ----------
 
 @api.post("/campaign", response_model=CampaignRead, status_code=201)
 def create_campaign(body: CampaignCreate, session: Session = Depends(get_session)):
     seed = body.seed if body.seed is not None else random.randrange(2**31)
     name = body.character_name.strip()
+    try:
+        # The hidden-talent roll happens here, once. The result is stored with the character.
+        character = sim.new_character(name, body.species, seed)
+    except sim.InvalidChoice as e:
+        raise HTTPException(400, str(e))
+
     for other in session.exec(select(Campaign).where(Campaign.active == True)):  # noqa: E712
         other.active = False
         session.add(other)
-
     campaign = Campaign(name=(body.campaign_name or name).strip(), seed=seed, active=True)
     session.add(campaign)
     session.flush()
-    character = sim.new_character(name, random.Random(seed))
     session.add(CharacterRecord.from_character(campaign.id, character))
     session.commit()
     session.refresh(campaign)
@@ -165,7 +220,7 @@ def get_character(session: Session = Depends(get_session)):
 @api.get("/actions", response_model=list[OptionRead])
 def list_actions(session: Session = Depends(get_session)):
     campaign, rec = _active(session)
-    return sim.offer_actions(rec.to_character(), campaign.seed)
+    return sim.offer_actions(sim.repair(rec.to_character()), campaign.seed)
 
 
 @api.post("/actions/{action_id}", response_model=CharacterRead)
@@ -191,12 +246,6 @@ def get_history(
     _, rec = _active(session)
     history = list(rec.history)
     return history[-limit:] if limit else history
-
-
-@api.get("/skills")
-def get_skills():
-    """{skill_id: category}, straight from skills.json."""
-    return sim.load_skills()
 
 
 app.include_router(api)

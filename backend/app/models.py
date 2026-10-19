@@ -2,11 +2,17 @@ from datetime import datetime, timezone
 
 from sqlmodel import JSON, Column, Field, SQLModel
 
-from .engine import Character
+from .character import Character
 
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+JSON_FIELDS = ("stats", "skills", "axes", "traits", "flags", "counters", "items", "history", "queued_events")
+DICT_FIELDS = ("stats", "skills", "axes", "counters", "items")
+PLAIN_FIELDS = ("name", "species_id", "age", "alive", "location", "cause_of_death",
+                "action_taken", "pending_event", "hidden_talent", "talent_state")
 
 
 class Campaign(SQLModel, table=True):
@@ -19,18 +25,32 @@ class Campaign(SQLModel, table=True):
 
 
 class CharacterRecord(SQLModel, table=True):
-    """The character living inside a campaign."""
+    """The character living inside a campaign.
+
+    hidden_talent / talent_state are written once at creation and afterwards only change when
+    the talent awakens. Loading a save never rolls anything.
+    """
     id: int | None = Field(default=None, primary_key=True)
     campaign_id: int = Field(foreign_key="campaign.id", index=True)
     name: str
+    species_id: str = "human"
     age: int = 0
     alive: bool = True
+    location: str = "village"
     stats: dict = Field(default_factory=dict, sa_column=Column(JSON))
     skills: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    axes: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    traits: list = Field(default_factory=list, sa_column=Column(JSON))
+    flags: list = Field(default_factory=list, sa_column=Column(JSON))
+    counters: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    items: dict = Field(default_factory=dict, sa_column=Column(JSON))
     history: list = Field(default_factory=list, sa_column=Column(JSON))
+    queued_events: list = Field(default_factory=list, sa_column=Column(JSON))
     cause_of_death: str | None = None
     action_taken: str | None = None
     pending_event: str | None = None
+    hidden_talent: str | None = None
+    talent_state: str = "none"
 
     @classmethod
     def from_character(cls, campaign_id: int, c: Character) -> "CharacterRecord":
@@ -39,20 +59,15 @@ class CharacterRecord(SQLModel, table=True):
         return rec
 
     def to_character(self) -> Character:
-        return Character(
-            name=self.name, age=self.age, alive=self.alive,
-            stats=dict(self.stats), skills=dict(self.skills), history=list(self.history),
-            cause_of_death=self.cause_of_death, action_taken=self.action_taken,
-            pending_event=self.pending_event,
-        )
+        data = {f: getattr(self, f) for f in PLAIN_FIELDS}
+        for f in JSON_FIELDS:
+            value = getattr(self, f)
+            data[f] = value.copy() if value is not None else ({} if f in DICT_FIELDS else [])
+        return Character(**data)
 
     def update_from(self, c: Character) -> None:
-        # Assign fresh objects so SQLAlchemy notices the JSON changed.
-        self.age = c.age
-        self.alive = c.alive
-        self.stats = dict(c.stats)
-        self.skills = dict(c.skills)
-        self.history = list(c.history)
-        self.cause_of_death = c.cause_of_death
-        self.action_taken = c.action_taken
-        self.pending_event = c.pending_event
+        for f in PLAIN_FIELDS:
+            setattr(self, f, getattr(c, f))
+        for f in JSON_FIELDS:                       # fresh objects, so SQLAlchemy sees the change
+            value = getattr(c, f)
+            setattr(self, f, value.copy())

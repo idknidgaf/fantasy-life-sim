@@ -1,0 +1,134 @@
+# A TRAIT is a known modifier or ability.
+#   modifiers      stat (flat bonus), skill_aptitude (xp multipliers), mortality (death-chance multiplier),
+#                  unlock_skills (lets the character train locked skills)
+#   abilities      named abilities. Implemented so far: second_wind. The rest are reserved for combat (Phase 3).
+#   prerequisites  requirements that must hold for the trait to be granted by any route
+#   birth          chance of being born with it (and requirements to be eligible)
+#   acquire        rules rolled each year-end: when requirements hold, the trait is gained with `chance`
+- id: iron_constitution
+  name: Iron Constitution
+  description: Your body shrugs off illness and injury that would fell others.
+  tier: common
+  modifiers: {stat: {constitution: 6}, mortality: 0.8}
+  birth: {chance: 0.06}
+
+- id: fleet_footwork
+  name: Fleet Footwork
+  description: Quick, light feet make you hard to catch and hard to hit.
+  tier: common
+  modifiers: {stat: {dexterity: 5}, skill_aptitude: {stealth: 1.15}}
+  abilities: [evasive_step]
+  birth: {chance: 0.05}
+  acquire:
+    - requirements: [{stat: dexterity, min: 55}, {skill: stealth, min_level: 6}]
+      chance: 0.15
+      narrative: Years of moving quietly and quickly have turned into instinct. You have gained Fleet Footwork.
+
+- id: keen_sense
+  name: Keen Sense
+  description: You notice what others walk straight past.
+  tier: common
+  modifiers: {stat: {wisdom: 3}, skill_aptitude: {exploration: 1.25, tracking: 1.25}}
+  birth: {chance: 0.06}
+
+- id: second_wind
+  name: Second Wind
+  description: When you are beaten, something deep inside gives you one more push. A failed check can be retried.
+  tier: uncommon
+  abilities: [second_wind]
+  acquire:
+    - requirements: [{stat: constitution, min: 50}, {skill: willpower, min_level: 8}]
+      chance: 0.12
+      narrative: When you thought you were finished, you found strength you did not know you had. You have gained Second Wind.
+
+- id: vampiric_edge
+  name: Vampiric Edge
+  description: A dark gift that feeds on the vitality of others. Reserved for combat.
+  tier: rare
+  modifiers: {stat: {strength: 2}}
+  abilities: [life_drain]
+  acquire:
+    - requirements: [{skill: necromancy, min_level: 15}, {axis: good_evil, max: -20}]
+      chance: 0.05
+      narrative: Your studies and your conscience have both run dry, and something hungry has settled into you. You have gained Vampiric Edge.
+
+- id: aegis_of_titan
+  name: Aegis of Titan
+  description: Your body has become a fortress. Unlocks a powerful defensive ability in combat.
+  tier: legendary
+  modifiers: {stat: {constitution: 10}, mortality: 0.7}
+  abilities: [titan_guard]
+  acquire:
+    - requirements: [{stat: constitution, min: 70}, {skill: willpower, min_level: 20}]
+      chance: 0.04
+      narrative: Blows that once would have broken you now simply stop. You have gained Aegis of Titan.
+
+- id: worldrender
+  name: Worldrender
+  description: A rare, devastating power that bends combat and destruction to your will.
+  tier: legendary
+  modifiers: {stat: {strength: 15}}
+  abilities: [world_breaker]
+  prerequisites: [{trait: adversary_instinct}]
+  acquire:
+    - requirements: [{trait: adversary_instinct}, {stat: strength, min: 75}]
+      chance: 0.03
+      narrative: Something that has been building in you for years finally breaks free. The ground remembers. You have gained Worldrender.
+
+- id: regenerative
+  name: Regenerative
+  description: Your body knits itself back together with unsettling speed.
+  tier: uncommon
+  modifiers: {stat: {constitution: 2}, mortality: 0.85}
+  abilities: [regeneration]
+
+- id: draconic_scales
+  name: Draconic Scales
+  description: Hard scales armour your body.
+  tier: uncommon
+  modifiers: {stat: {constitution: 4}, mortality: 0.9}
+  abilities: [dragon_scales]
+
+- id: pack_alpha
+  name: Pack Alpha
+  description: Others follow your lead without being asked.
+  tier: uncommon
+  modifiers: {stat: {charisma: 5}, skill_aptitude: {command: 1.3, intimidation: 1.2}}
+
+- id: lone_wanderer
+  name: Lone Wanderer
+  description: You walk alone and have learned to rely on yourself.
+  tier: uncommon
+  modifiers: {stat: {wisdom: 2}, skill_aptitude: {exploration: 1.2, survival: 1.2, stealth: 1.2}}
+
+- id: generalist
+  name: Master of None, Student of All
+  description: Every skill you touch comes a little easier. You learn fast, and widely.
+  tier: rare
+  modifiers: {skill_aptitude: {all: 1.25}}
+
+- id: blessed
+  name: Divine Favor
+  description: Something greater watches over you. Divine power becomes possible.
+  tier: rare
+  modifiers: {stat: {charisma: 5, wisdom: 3}, mortality: 0.85, unlock_skills: [divine_power]}
+
+- id: adversary_instinct
+  name: World's Adversary
+  description: Monsters and overwhelming foes sharpen you instead of breaking you.
+  tier: rare
+  modifiers: {stat: {strength: 4, dexterity: 2}, skill_aptitude: {combat: 1.15}}
+  abilities: [monster_slayer]
+
+- id: primal_spark
+  name: Primordial Spark
+  description: You carry a fragment of an ancient, elemental source of power.
+  tier: rare
+  modifiers: {stat: {constitution: 4, wisdom: 4}, skill_aptitude: {magic: 1.3, supernatural: 1.3}}
+
+- id: steel_resolve
+  name: Unbroken Will
+  description: Mental and spiritual trials slide off you.
+  tier: rare
+  modifiers: {stat: {wisdom: 3, constitution: 3}, skill_aptitude: {mental: 1.3}, mortality: 0.95}
+  abilities: [unbroken]

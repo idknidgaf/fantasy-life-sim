@@ -13,16 +13,20 @@ export default function EventPanel({ event, busy, onChoose }: Props) {
       <h2>{event.title}</h2>
       <p className="lead">{event.text}</p>
       <div className="choices">
-        {event.choices.map((c) => (
-          <button
-            key={c.id}
-            className="choice"
-            disabled={busy}
-            onClick={() => onChoose(event.id, c.id)}
-          >
-            {c.label}
-          </button>
-        ))}
+        {event.choices.map((c) => {
+          const locked = c.available === false
+          return (
+            <button
+              key={c.id}
+              className={`choice${locked ? ' locked' : ''}`}
+              disabled={busy || locked}
+              onClick={() => onChoose(event.id, c.id)}
+            >
+              <span>{c.label}</span>
+              {locked && c.requirement && <small className="requirement">🔒 {c.requirement}</small>}
+            </button>
+          )
+        })}
       </div>
     </section>
   )

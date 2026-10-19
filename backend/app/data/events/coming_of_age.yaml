@@ -1,0 +1,406 @@
+# Adolescence and adulthood: the world opens up.
+
+- id: strange_book
+  title: A Strange Old Book
+  weight: 1
+  once: true
+  narrative: >
+    Beneath a loose floorboard you find a leather-bound book written in a script you half recognise.
+  conditions:
+    min_stage: adolescence
+    max_stage: adulthood
+    species_tags: [speaker]
+  choices:
+    - id: study
+      text: Study it in secret
+      check: {stat: wisdom, difficulty: 40}
+      success:
+        result: Months of careful study teach you something, and the whispers fade when you tell them to.
+        effects:
+          - skill_xp: {knowledge: 3}
+          - skill_xp: {necromancy: 2}
+            chance: 0.3
+          - counter: {mental_trials: 1}
+      failure:
+        result: The whispers cling to you. You learn a great deal, and not all of it is wholesome.
+        effects:
+          - skill_xp: {knowledge: 1}
+          - skill_xp: {necromancy: 3}
+          - axis_delta: {good_evil: -4}
+          - counter: {mental_trials: 1}
+    - id: burn
+      text: Burn it before it can do harm
+      result: Some knowledge is better left in the fire.
+      effects:
+        - skill_xp: {willpower: 2}
+        - axis_delta: {discipline: 5, law_chaos: 3}
+        - counter: {mental_trials: 1}
+
+- id: forest_ancient_altar
+  title: The Ancient Altar
+  weight: 5
+  narrative: >
+    Beneath the roots of an ancient tree, you discover an altar humming with forgotten magic.
+  conditions:
+    min_stage: adolescence
+    location_tags: [ancient_forest]
+    requires_any:
+      - skill: exploration
+        min_level: 10
+      - trait: keen_sense
+  choices:
+    - id: study
+      text: Study the runes
+      requirements:
+        - stat: wisdom
+          min: 20
+        - species_tag: speaker
+      result: The runes rearrange themselves in your mind, and for a moment you understand.
+      effects:
+        - skill_xp: {magic: 8}
+        - flag: studied_ancient_altar
+    - id: sniff
+      text: Sniff the stones and sense what lies beneath
+      requirements:
+        - species_category: beast
+      result: Old, patient power rises from the ground like a scent.
+      effects:
+        - skill_xp: {tracking: 2}
+        - skill_xp: {concentration: 2}
+        - flag: studied_ancient_altar
+    - id: offer
+      text: Offer something valuable
+      requirements:
+        - item_tag: valuable_offering
+      result: The altar accepts your offering. Something shifts in the roots.
+      effects:
+        - consume_item: {tag: valuable_offering}
+        - flag: altar_offering_made
+        - grant_item: ancient_relic
+        - skill_xp: {spirit_magic: 3}
+    - id: leave
+      text: Leave the altar undisturbed
+      result: Some places should be left as you found them.
+      effects:
+        - stat_delta: {wisdom: 1}
+
+- id: wandering_merchant
+  title: A Wandering Merchant
+  weight: 3
+  narrative: >
+    A merchant with a creaking cart stops in your village, hawking trinkets from distant lands.
+  conditions:
+    min_stage: adolescence
+    species_tags: [speaker]
+  choices:
+    - id: haggle
+      text: Haggle for a bargain
+      check: {stat: charisma, difficulty: 40}
+      success:
+        result: You drive a hard bargain, and he grudgingly respects you.
+        effects:
+          - stat_delta: {charisma: 1}
+          - skill_xp: {negotiation: 1.5}
+          - grant_item: silver_locket
+      failure:
+        result: He sees through you and keeps his prices.
+        effects:
+          - skill_xp: {negotiation: 0.5}
+    - id: listen
+      text: Listen to his tales of far-off places
+      result: His stories open your mind to a wider world.
+      effects:
+        - stat_delta: {wisdom: 1}
+        - axis_delta: {curiosity: 3}
+    - id: travel
+      text: Leave with him for the city
+      requirements:
+        - not:
+            location_tag: city
+      result: The road is long, and the city is louder than anything you have known.
+      effects:
+        - set_location: city
+        - skill_xp: {exploration: 2}
+        - axis_delta: {curiosity: 5, bravery: 3}
+    - id: ignore
+      text: Ignore him
+      result: You go about your day.
+
+- id: wolves_in_the_woods
+  title: Wolves in the Woods
+  weight: 2
+  narrative: >
+    A low growl stops you on the forest path. Yellow eyes watch from the undergrowth.
+  conditions:
+    min_stage: adolescence
+    max_stage: middle_age
+    species_categories: [humanoid]
+  choices:
+    - id: fight
+      text: Stand and fight
+      check: {stat: strength, difficulty: 50}
+      success:
+        result: Teeth and fury, and somehow you drive them off.
+        effects:
+          - stat_delta: {strength: 1}
+          - skill_xp: {martial_arts: 1.5}
+          - axis_delta: {bravery: 3}
+      failure:
+        result: You are badly mauled before the pack loses interest.
+        effects:
+          - stat_delta: {constitution: -2}
+          - counter: {overwhelming_foe: 1}
+          - die: {cause: wolves}
+            chance: 0.05
+    - id: climb
+      text: Climb the nearest tree
+      check: {stat: dexterity, difficulty: 35}
+      success:
+        result: You wait out the pack, stiff and shaken.
+        effects:
+          - stat_delta: {dexterity: 1}
+      failure:
+        result: A branch snaps under you on the way down.
+        effects:
+          - stat_delta: {constitution: -1}
+    - id: hide
+      text: Slip away quietly
+      result: You melt into the shadows.
+      effects:
+        - skill_xp: {stealth: 2}
+
+- id: tournament
+  title: A Tournament at the Fair
+  weight: 2
+  narrative: >
+    Banners go up for a martial tournament. The winner earns a purse, and a name.
+  conditions:
+    min_stage: young_adult
+    max_stage: adulthood
+    species_tags: [tool_user]
+  choices:
+    - id: enter
+      text: Enter the contest
+      check: {stat: strength, difficulty: 45}
+      success:
+        result: You fight your way to the final and win it, bruised and glowing.
+        effects:
+          - skill_xp: {swordsmanship: 3}
+          - stat_delta: {charisma: 1}
+          - grant_item: rough_gemstone
+      failure:
+        result: You fight bravely and lose in the second round.
+        effects:
+          - skill_xp: {swordsmanship: 1.5}
+          - stat_delta: {constitution: -1}
+            chance: 0.5
+    - id: watch
+      text: Watch and learn from the fighters
+      result: You study every feint and every bit of footwork.
+      effects:
+        - skill_xp: {tactics: 1.5}
+        - stat_delta: {wisdom: 1}
+
+- id: guild_recruiter
+  title: The Adventurers' Guild
+  weight: 3
+  once: true
+  narrative: >
+    A recruiter in a faded tabard looks you over and asks if you have ever considered a more interesting life.
+  conditions:
+    min_stage: adolescence
+    max_stage: adulthood
+    location_tags: [city]
+    species_tags: [speaker, tool_user]
+  choices:
+    - id: join
+      text: Sign the guild charter
+      result: Your name goes in the ledger, and your life gets a lot more interesting.
+      effects:
+        - flag: guild_member
+        - skill_xp: {command: 1}
+        - axis_delta: {law_chaos: 4, sociability: 4}
+    - id: decline
+      text: Politely decline
+      result: He shrugs. There are always others.
+    - id: pickpocket
+      text: Pick the recruiter's pocket
+      check: {stat: dexterity, difficulty: 45}
+      success:
+        result: Light fingers and a lighter conscience. Nobody notices a thing.
+        effects:
+          - skill_xp: {deception: 2}
+          - grant_item: rough_gemstone
+          - axis_delta: {law_chaos: -6, good_evil: -3}
+      failure:
+        result: He catches your wrist and gives you a look of weary disappointment.
+        effects:
+          - stat_delta: {charisma: -1}
+          - axis_delta: {law_chaos: -3}
+
+- id: hermit_on_the_hill
+  title: The Hermit on the Hill
+  weight: 1
+  once: true
+  narrative: >
+    Smoke rises from a hut high on the hill. They say a hermit there knows things.
+  conditions:
+    min_stage: adolescence
+    max_stage: middle_age
+    species_tags: [speaker]
+  choices:
+    - id: seek
+      text: Climb up and ask to be taught
+      result: He teaches you to quiet your mind, and sends you down with a pot of salve.
+      effects:
+        - stat_delta: {wisdom: 2}
+        - skill_xp: {concentration: 3}
+        - grant_item: healing_salve
+        - counter: {mental_trials: 1}
+    - id: mock
+      text: Laugh at the old fool
+      result: You return home pleased with yourself, and no wiser.
+      effects:
+        - stat_delta: {charisma: -1}
+        - axis_delta: {good_evil: -2}
+
+- id: bandit_ambush
+  title: Ambush on the Road
+  weight: 2
+  narrative: >
+    Three armed figures step out of the trees ahead of you. A frightened traveller crouches in the ditch nearby.
+  conditions:
+    min_stage: young_adult
+    max_stage: middle_age
+    species_tags: [speaker, tool_user]
+  choices:
+    - id: fight
+      text: Draw steel and fight
+      check: {stat: strength, difficulty: 50}
+      success:
+        result: It is brief and ugly. The bandits flee, leaving a little something behind.
+        effects:
+          - skill_xp: {martial_arts: 2}
+          - grant_item: rough_gemstone
+          - axis_delta: {bravery: 4}
+      failure:
+        result: They are better armed than you thought. You barely escape with your life.
+        effects:
+          - stat_delta: {constitution: -2}
+          - counter: {overwhelming_foe: 1}
+          - die: {cause: bandits}
+            chance: 0.05
+    - id: negotiate
+      text: Talk your way out of it
+      check: {stat: charisma, difficulty: 45}
+      success:
+        result: A calm voice and a small bribe, and they decide you are not worth the trouble.
+        effects:
+          - skill_xp: {negotiation: 2}
+      failure:
+        result: They take your purse and your pride.
+        effects:
+          - axis_delta: {bravery: -2}
+    - id: guild
+      text: Call on your guildmates
+      requirements:
+        - flag: guild_member
+      result: A whistle, a shout, and the guild arrives. The bandits do not stay.
+      effects:
+        - skill_xp: {command: 1.5}
+        - axis_delta: {law_chaos: 3}
+    - id: protect
+      text: Shield the traveller with your own body
+      check: {stat: constitution, difficulty: 45}
+      success:
+        result: You take the blows meant for them, and keep standing until help arrives.
+        effects:
+          - counter: {selfless_acts: 1}
+          - axis_delta: {good_evil: 5, bravery: 4}
+      failure:
+        result: You are badly hurt, though the traveller escapes.
+        effects:
+          - stat_delta: {constitution: -2}
+          - counter: {selfless_acts: 1}
+          - axis_delta: {good_evil: 5}
+
+- id: shadow_over_the_valley
+  title: A Shadow Over the Valley
+  weight: 1
+  narrative: >
+    A vast shape blots out the sun. Birds fall silent. Whatever passes overhead has no interest in you, but it does not need to.
+  conditions:
+    min_stage: adolescence
+  choices:
+    - id: hide
+      text: Hide and wait for it to pass
+      result: You press yourself into the earth until the sky is bright again.
+      effects:
+        - skill_xp: {stealth: 2}
+    - id: watch
+      text: Watch it pass, unmoving
+      result: It does not look down. You will remember the sight for the rest of your life.
+      effects:
+        - counter: {overwhelming_foe: 1, mental_trials: 1}
+        - skill_xp: {willpower: 1}
+        - die: {cause: a creature far beyond you}
+          chance: 0.02
+    - id: defy
+      text: Stand your ground and stare it down
+      check: {stat: strength, difficulty: 120}
+      success:
+        result: It turns its head, and for one impossible moment it nods.
+        effects:
+          - axis_delta: {bravery: 10}
+          - counter: {overwhelming_foe: 1}
+      failure:
+        result: The air itself bends under its glance. You live, though barely, and you will never forget it.
+        effects:
+          - stat_delta: {constitution: -3}
+          - counter: {overwhelming_foe: 1, mental_trials: 1}
+          - axis_delta: {bravery: 8}
+          - die: {cause: a creature far beyond you}
+            chance: 0.08
+
+- id: fever_outbreak
+  title: Fever in the Village
+  weight: 2
+  narrative: >
+    A wasting fever sweeps through the village. Neighbours fall ill, and the healers are overwhelmed.
+  conditions:
+    min_stage: young_adult
+    species_categories: [humanoid]
+  choices:
+    - id: tend
+      text: Help tend the sick
+      check: {stat: constitution, difficulty: 45}
+      success:
+        result: You do what you can, and people remember it.
+        effects:
+          - stat_delta: {charisma: 1}
+          - skill_xp: {survival: 1}
+          - counter: {selfless_acts: 1}
+          - axis_delta: {good_evil: 4}
+      failure:
+        result: You catch the fever yourself, but you do not stop helping until you drop.
+        effects:
+          - stat_delta: {constitution: -2}
+          - counter: {selfless_acts: 1}
+          - axis_delta: {good_evil: 4}
+          - die: {cause: a village fever}
+            chance: 0.03
+    - id: salve
+      text: Use your healing salve on the worst cases
+      requirements:
+        - item: healing_salve
+      result: The salve works wonders. Three families owe you more than they can say.
+      effects:
+        - consume_item: {id: healing_salve}
+        - counter: {selfless_acts: 1}
+        - axis_delta: {good_evil: 5}
+        - stat_delta: {charisma: 1}
+    - id: shelter
+      text: Stay indoors and wait it out
+      result: The fever passes you by.
+      effects:
+        - axis_delta: {good_evil: -2}

@@ -1,4 +1,4 @@
-import type { Campaign, Character, HistoryEntry, Option } from './types'
+import type { Campaign, Character, HistoryEntry, Option, Species } from './types'
 
 const BASE: string = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
@@ -34,10 +34,11 @@ const enc = encodeURIComponent
 
 export const api = {
   getSkills: () => request<Record<string, string>>('/skills'),
+  getSpecies: () => request<Species[]>('/species'),
 
   listCampaigns: () => request<Campaign[]>('/campaigns'),
-  createCampaign: (characterName: string, seed?: number) =>
-    post<Campaign>('/campaign', { character_name: characterName, seed: seed ?? null }),
+  createCampaign: (characterName: string, species: string, seed?: number) =>
+    post<Campaign>('/campaign', { character_name: characterName, species, seed: seed ?? null }),
   activateCampaign: (id: number) => post<Campaign>(`/campaigns/${id}/activate`),
   deleteCampaign: (id: number) => request<void>(`/campaigns/${id}`, { method: 'DELETE' }),
 

@@ -1,0 +1,385 @@
+# Infancy through childhood. Infant events are passive: life happens TO you, so they have one choice
+# and a "Continue"-style outcome. Agency grows with the stage.
+
+- id: infant_first_words
+  title: First Words
+  weight: 3
+  narrative: >
+    Sounds you have heard a thousand times begin to mean something. Your caretakers hold their breath as you try one out.
+  conditions:
+    min_age: 1
+    max_stage: infancy
+    species_tags: [speaker]
+  choices:
+    - id: babble
+      text: Babble back at them
+      result: Your caretakers cheer, delighted.
+      effects:
+        - axis_delta: {sociability: 4}
+        - stat_delta: {charisma: 1}
+          chance: 0.4
+
+- id: infant_fever
+  title: A Fever in the Night
+  weight: 2
+  once: true
+  narrative: >
+    Your small body burns. Worried voices come and go as the night drags on.
+  conditions:
+    max_stage: early_childhood
+  choices:
+    - id: endure
+      text: Endure the night
+      check: {stat: constitution, difficulty: 35}
+      success:
+        result: By dawn the fever breaks and you sleep soundly.
+        effects:
+          - stat_delta: {constitution: 1}
+      failure:
+        result: The fever is slow to leave, and it leaves you weaker.
+        effects:
+          - stat_delta: {constitution: -2}
+          - die: {cause: a childhood fever}
+            chance: 0.06
+
+- id: den_days
+  title: Days in the Den
+  weight: 3
+  narrative: >
+    Warm bodies, milk and the dark, rich smell of the den. Your littermates pile on top of you in their sleep.
+  conditions:
+    max_stage: infancy
+    species_tags: [pack_animal]
+  choices:
+    - id: nestle
+      text: Nestle in with your littermates
+      result: You grow strong on warmth and the pack's company.
+      effects:
+        - axis_delta: {sociability: 5}
+        - stat_delta: {constitution: 1}
+          chance: 0.5
+
+- id: clutch_warmth
+  title: The Warmth of the Clutch
+  weight: 3
+  narrative: >
+    Heat pulses around you, ancient and patient. Something in your blood answers it.
+  conditions:
+    max_stage: infancy
+    species_tags: [draconic]
+  choices:
+    - id: bask
+      text: Bask in the heat
+      result: The warmth settles into you like a promise.
+      effects:
+        - skill_xp: {draconic_mastery: 1.5}
+        - axis_delta: {bravery: 3}
+
+- id: formless_days
+  title: Formless Days
+  weight: 3
+  narrative: >
+    You are barely more than a hungry, wobbling blob. Everything you bump into is either food or not food yet.
+  conditions:
+    max_stage: infancy
+    species_tags: [amorphous]
+  choices:
+    - id: absorb
+      text: Absorb whatever is nearby
+      result: Simple appetites teach you simple lessons.
+      effects:
+        - skill_xp: {survival: 1}
+        - stat_delta: {constitution: 1}
+          chance: 0.5
+
+- id: lost_in_the_crowd
+  title: Lost in the Crowd
+  weight: 3
+  narrative: >
+    One moment you were holding a hand. Now there is only a forest of legs, and none of them are familiar.
+  conditions:
+    min_stage: early_childhood
+    max_stage: early_childhood
+    species_categories: [humanoid]
+  choices:
+    - id: call_out
+      text: Call out as loudly as you can
+      result: Someone hears you almost at once.
+      effects:
+        - axis_delta: {sociability: 5}
+        - stat_delta: {charisma: 1}
+          chance: 0.3
+    - id: search
+      text: Go looking for them yourself
+      check: {stat: dexterity, difficulty: 30}
+      success:
+        result: You weave through the crowd and find your way back, very proud of yourself.
+        effects:
+          - axis_delta: {bravery: 5, curiosity: 4}
+      failure:
+        result: You wander far and end up crying behind a barrel until someone finds you.
+        effects:
+          - axis_delta: {bravery: 1}
+    - id: wait
+      text: Stay exactly where you are
+      result: You were told to, and you do. Eventually they come.
+      effects:
+        - axis_delta: {discipline: 5}
+
+- id: pup_wrestling
+  title: Pups at Play
+  weight: 3
+  narrative: >
+    The den is too small for you now. Your littermates tumble and snap, daring you to join in.
+  conditions:
+    min_stage: early_childhood
+    max_stage: early_childhood
+    species_tags: [pack_animal]
+  choices:
+    - id: wrestle
+      text: Tumble into the fray
+      result: You lose most of the bouts and enjoy every one.
+      effects:
+        - stat_delta: {strength: 1}
+          chance: 0.6
+        - axis_delta: {bravery: 4, sociability: 3}
+    - id: watch
+      text: Watch from a safe spot
+      result: You learn who is strong and who is bluffing.
+      effects:
+        - stat_delta: {wisdom: 1}
+          chance: 0.5
+        - axis_delta: {discipline: 3}
+    - id: wander
+      text: Wander off to sniff around
+      result: The world smells enormous.
+      effects:
+        - skill_xp: {exploration: 1}
+        - axis_delta: {curiosity: 6}
+
+- id: first_spark
+  title: A Spark Within
+  weight: 3
+  narrative: >
+    Something deep in your body hums, a restless warmth you cannot put a name to.
+  conditions:
+    min_stage: early_childhood
+    max_stage: early_childhood
+    species_categories: [monstrous]
+  choices:
+    - id: reach
+      text: Reach for the feeling
+      result: It flickers, and for a moment it is yours.
+      effects:
+        - skill_xp: {concentration: 1.5}
+        - skill_xp: {elemental_magic: 1}
+          chance: 0.3
+        - axis_delta: {curiosity: 5}
+    - id: ignore
+      text: Ignore it
+      result: Eventually it quiets. For now.
+      effects:
+        - axis_delta: {discipline: 3}
+
+- id: stray_dog
+  title: A Stray Dog
+  weight: 2
+  narrative: >
+    A thin, wary dog follows you home from the edge of the woods and watches you with serious eyes.
+  conditions:
+    min_stage: childhood
+    max_stage: adolescence
+    species_categories: [humanoid]
+  choices:
+    - id: befriend
+      text: Share your food and befriend it
+      result: The dog never leaves your side, and you learn to read its moods.
+      effects:
+        - skill_xp: {beast_instinct: 2}
+        - axis_delta: {good_evil: 3}
+    - id: shoo
+      text: Shoo it away
+      result: It slinks back into the trees.
+      effects:
+        - axis_delta: {good_evil: -2}
+
+- id: village_bully
+  title: The Village Bully
+  weight: 2
+  narrative: >
+    An older child corners you behind the granary and demands what little you have.
+  conditions:
+    min_stage: childhood
+    max_stage: adolescence
+    species_categories: [humanoid]
+  choices:
+    - id: fight
+      text: Fight back
+      check: {stat: strength, difficulty: 35}
+      success:
+        result: It is a messy scuffle, but you come out on top.
+        effects:
+          - skill_xp: {martial_arts: 1.5}
+          - stat_delta: {strength: 1}
+          - axis_delta: {bravery: 4}
+      failure:
+        result: You lose, but you do not stay down easily.
+        effects:
+          - skill_xp: {martial_arts: 0.5}
+          - stat_delta: {constitution: -1}
+          - axis_delta: {bravery: 2}
+    - id: talk
+      text: Talk them down
+      check: {stat: charisma, difficulty: 35}
+      success:
+        result: Words work where fists would not.
+        effects:
+          - stat_delta: {charisma: 1}
+          - skill_xp: {negotiation: 1}
+          - axis_delta: {law_chaos: 2}
+      failure:
+        result: They laugh at you and take your lunch anyway.
+        effects:
+          - axis_delta: {sociability: -2}
+    - id: run
+      text: Run for it
+      result: You are faster than they are.
+      effects:
+        - stat_delta: {dexterity: 1}
+        - axis_delta: {bravery: -3}
+
+- id: fever_child
+  title: Fever in the Village
+  weight: 2
+  narrative: >
+    A wasting fever sweeps the village. Your family is short of hands to fetch water and cool the sick.
+  conditions:
+    min_stage: childhood
+    max_stage: adolescence
+    species_categories: [humanoid]
+  choices:
+    - id: help
+      text: Help your family tend the sick
+      check: {stat: constitution, difficulty: 40}
+      success:
+        result: You do what you can, and the village remembers it.
+        effects:
+          - stat_delta: {charisma: 1}
+          - skill_xp: {survival: 1}
+          - counter: {selfless_acts: 1}
+          - axis_delta: {good_evil: 4}
+      failure:
+        result: You catch the fever yourself, though you keep helping as long as you can.
+        effects:
+          - stat_delta: {constitution: -2}
+          - counter: {selfless_acts: 1}
+          - axis_delta: {good_evil: 4}
+          - die: {cause: a village fever}
+            chance: 0.03
+    - id: shelter
+      text: Stay indoors, away from the sick
+      result: The fever passes your door.
+      effects:
+        - axis_delta: {good_evil: -2}
+
+- id: first_hunt
+  title: The First Hunt
+  weight: 3
+  narrative: >
+    The elders lead the pups to the edge of a meadow, where a hare has frozen in the long grass.
+  conditions:
+    min_stage: childhood
+    max_stage: childhood
+    species_tags: [predator]
+  choices:
+    - id: chase
+      text: Burst from cover and give chase
+      check: {stat: dexterity, difficulty: 45}
+      success:
+        result: A short, glorious sprint, and dinner is yours.
+        effects:
+          - skill_xp: {tracking: 2}
+          - stat_delta: {dexterity: 1}
+          - axis_delta: {bravery: 3}
+      failure:
+        result: The hare is gone and you are winded.
+        effects:
+          - skill_xp: {tracking: 0.5}
+    - id: stalk
+      text: Stalk it patiently
+      check: {stat: wisdom, difficulty: 30}
+      success:
+        result: You creep close enough to feel it breathe.
+        effects:
+          - skill_xp: {stealth: 2}
+          - axis_delta: {discipline: 4}
+      failure:
+        result: The hare spots you and bolts.
+        effects:
+          - skill_xp: {stealth: 0.5}
+    - id: watch
+      text: Watch how the adults do it
+      result: You learn the pack's patterns.
+      effects:
+        - skill_xp: {survival: 1}
+        - stat_delta: {wisdom: 1}
+          chance: 0.5
+
+- id: harvest_festival
+  title: The Harvest Festival
+  weight: 2
+  narrative: >
+    Lanterns, music and long tables fill the village square.
+  conditions:
+    min_stage: childhood
+    species_categories: [humanoid]
+  choices:
+    - id: dance
+      text: Join the dancing
+      result: You laugh until your sides ache.
+      effects:
+        - stat_delta: {charisma: 1}
+        - axis_delta: {sociability: 3}
+    - id: work
+      text: Help bring in the harvest
+      result: Honest labour, honest sweat.
+      effects:
+        - stat_delta: {strength: 1}
+        - stat_delta: {constitution: 1}
+          chance: 0.5
+        - axis_delta: {discipline: 2}
+    - id: sneak
+      text: Sneak sweets from the unattended tables
+      result: Nobody saw. Probably.
+      effects:
+        - skill_xp: {deception: 1}
+        - axis_delta: {law_chaos: -3, discipline: -2}
+
+- id: glowing_cave
+  title: The Glowing Cave
+  weight: 2
+  narrative: >
+    Deep in the rock, a pale light pulses. Everyone says it is only lichen.
+  conditions:
+    min_stage: childhood
+    max_stage: adolescence
+    location_tags: [cavern, mountain_hold]
+  choices:
+    - id: explore
+      text: Squeeze inside to investigate
+      check: {stat: dexterity, difficulty: 35}
+      success:
+        result: It is lichen, but a beautiful, strange kind, and you map every inch of the cave.
+        effects:
+          - skill_xp: {exploration: 2}
+          - axis_delta: {curiosity: 5}
+      failure:
+        result: You get wedged fast and have to be pulled out, scraped and embarrassed.
+        effects:
+          - stat_delta: {constitution: -1}
+          - axis_delta: {curiosity: 2}
+    - id: tell
+      text: Tell a grown-up
+      result: They thank you and keep you away from it.
+      effects:
+        - axis_delta: {law_chaos: 3}

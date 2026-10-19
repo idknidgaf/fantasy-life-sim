@@ -1,0 +1,4 @@
+- {id: silver_locket,  name: Silver Locket,  description: A small locket of old silver., tags: [valuable_offering, trinket]}
+- {id: rough_gemstone, name: Rough Gemstone, description: An uncut stone that catches the light., tags: [valuable_offering, gem]}
+- {id: healing_salve,  name: Healing Salve,  description: A pot of sharp-smelling herbal salve., tags: [medicine]}
+- {id: ancient_relic,  name: Ancient Relic,  description: A weathered object that hums faintly when held., tags: [relic, valuable_offering]}

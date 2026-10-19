@@ -11,6 +11,9 @@ export default function DeathSummary({ summary, onNewLife }: Props) {
     <section className="card death">
       <p className="eyebrow">A life has ended</p>
       <h2>{summary.name}</h2>
+      <p className="muted">
+        {summary.species} · {summary.alignment}
+      </p>
       <p className="lead">
         Died at age {summary.age} of {summary.cause_of_death ?? 'unknown causes'}.
       </p>
@@ -20,6 +23,18 @@ export default function DeathSummary({ summary, onNewLife }: Props) {
           : 'They never found a calling.'}{' '}
         They faced {summary.events_faced} defining {summary.events_faced === 1 ? 'moment' : 'moments'}.
       </p>
+
+      {summary.awakened_talent && (
+        <p className="talent-banner">
+          <strong>✦ Awakened talent: {summary.awakened_talent}</strong>
+        </p>
+      )}
+      {summary.unawakened_talent && (
+        <p className="talent-banner dormant">
+          <strong>✧ A hidden talent was never awakened: {summary.unawakened_talent}</strong>
+          <span>It slept inside them all their life.</span>
+        </p>
+      )}
 
       <div className="summary-grid">
         <div>
@@ -46,6 +61,18 @@ export default function DeathSummary({ summary, onNewLife }: Props) {
                 </li>
               ))}
             </ul>
+          )}
+          {summary.traits.length > 0 && (
+            <>
+              <h3>Traits</h3>
+              <ul className="chips">
+                {summary.traits.map((t) => (
+                  <li key={t} className="trait">
+                    {t}
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
         </div>
       </div>
