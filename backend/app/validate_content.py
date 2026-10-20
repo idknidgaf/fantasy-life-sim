@@ -2,6 +2,8 @@
 import sys
 
 from .content import ContentError, load_content
+from .story.errors import StoryContentError
+from .story.library import load_library
 
 
 def main() -> int:
@@ -17,6 +19,12 @@ def main() -> int:
     )
     for w in ct.warnings:
         print(f"  warning: {w}")
+    try:
+        story = load_library(content=ct)
+    except StoryContentError as e:
+        print("STORY CONTENT INVALID\n" + str(e))
+        return 1
+    print(f"OK: {len(story)} story engine events")
     return 0
 
 

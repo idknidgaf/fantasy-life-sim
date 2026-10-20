@@ -127,3 +127,39 @@ export interface HistoryEntry {
   text: string
   event_id: string | null
 }
+
+/** An event from the data-driven story engine (/api/story). */
+export interface StoryChoice {
+  id: string
+  text: string
+  available: boolean
+  locked_hint: string | null
+}
+
+export interface StoryEvent {
+  instance_id: number
+  event_id: string
+  event_version: number
+  event_type: string | null
+  /** true: the player may Age Up without resolving it (it can expire). Default: it blocks play. */
+  skippable: boolean
+  title: string
+  narrative: string
+  status: 'pending' | 'presented' | 'resolved' | 'expired'
+  created_year: number
+  expires_year: number | null
+  selected_choice_id: string | null
+  choices: StoryChoice[]
+}
+
+export interface StoryResolution {
+  instance_id: number
+  event_id: string
+  choice_id: string
+  replayed: boolean
+  effects: Record<string, unknown>[]
+  next_event: string | null
+  next_instance_id: number | null
+  next_skipped_reason: string | null
+  triggered_events: string[]
+}

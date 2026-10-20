@@ -1,0 +1,617 @@
+{
+  "condition_composites": {
+    "all": "list of conditions, all true",
+    "any": "list of conditions, one true",
+    "not": "a single condition, negated"
+  },
+  "condition_types": {
+    "age_at_least": {
+      "doc": "The character's age is >= value.",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "value": {
+            "minimum": 0,
+            "title": "Value",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "title": "AgeParams",
+        "type": "object"
+      }
+    },
+    "age_at_most": {
+      "doc": "The character's age is <= value.",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "value": {
+            "minimum": 0,
+            "title": "Value",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "title": "AgeParams",
+        "type": "object"
+      }
+    },
+    "choice_was_made": {
+      "doc": "The given choice of the given event was selected at some point in this life.",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "choice": {
+            "minLength": 1,
+            "title": "Choice",
+            "type": "string"
+          },
+          "event": {
+            "minLength": 1,
+            "title": "Event",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event",
+          "choice"
+        ],
+        "title": "ChoiceMadeParams",
+        "type": "object"
+      }
+    },
+    "event_completed": {
+      "doc": "An instance of the event has been resolved in this life.",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "event": {
+            "minLength": 1,
+            "title": "Event",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event"
+        ],
+        "title": "EventParams",
+        "type": "object"
+      }
+    },
+    "flag_at_least": {
+      "doc": "The numeric story flag is >= value. An unset flag counts as 0; a non-numeric flag is never enough.",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "flag": {
+            "minLength": 1,
+            "title": "Flag",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "flag",
+          "value"
+        ],
+        "title": "FlagAtLeastParams",
+        "type": "object"
+      }
+    },
+    "flag_equals": {
+      "doc": "The story flag is set and equals value (type-aware: true is not 1). An unset flag never equals anything.",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "flag": {
+            "minLength": 1,
+            "title": "Flag",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "flag",
+          "value"
+        ],
+        "title": "FlagEqualsParams",
+        "type": "object"
+      }
+    },
+    "trait_absent": {
+      "doc": "The character does not have the trait.",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "trait": {
+            "minLength": 1,
+            "title": "Trait",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trait"
+        ],
+        "title": "TraitParams",
+        "type": "object"
+      }
+    },
+    "trait_owned": {
+      "doc": "The character has the trait.",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "trait": {
+            "minLength": 1,
+            "title": "Trait",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trait"
+        ],
+        "title": "TraitParams",
+        "type": "object"
+      }
+    }
+  },
+  "effect_types": {
+    "complete_event": {
+      "doc": "Mark an event as completed without a choice (closes an open instance, or records a finished one).",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "event": {
+            "minLength": 1,
+            "title": "Event",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event"
+        ],
+        "title": "EventRefParams",
+        "type": "object"
+      }
+    },
+    "grant_trait": {
+      "doc": "Give the character a trait. Reuses the game's trait rules: already owned or unmet prerequisites is a no-op.",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "trait": {
+            "minLength": 1,
+            "title": "Trait",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trait"
+        ],
+        "title": "GrantTraitParams",
+        "type": "object"
+      }
+    },
+    "increment_flag": {
+      "doc": "Add amount (default 1) to a numeric flag. An unset flag starts at 0; a non-numeric flag is an error.",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "default": 1,
+            "title": "Amount"
+          },
+          "flag": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Flag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "flag"
+        ],
+        "title": "IncrementFlagParams",
+        "type": "object"
+      }
+    },
+    "set_flag": {
+      "doc": "Set a story flag to a bool, number or string.",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "flag": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Flag",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "flag",
+          "value"
+        ],
+        "title": "SetFlagParams",
+        "type": "object"
+      }
+    },
+    "start_event": {
+      "doc": "Create a pending instance of another event. Its eligibility and lifecycle policy still apply.",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "event": {
+            "minLength": 1,
+            "title": "Event",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event"
+        ],
+        "title": "EventRefParams",
+        "type": "object"
+      }
+    }
+  },
+  "event_file": {
+    "$defs": {
+      "Choice": {
+        "additionalProperties": false,
+        "properties": {
+          "conditions": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Conditions"
+          },
+          "effects": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Effects",
+            "type": "array"
+          },
+          "id": {
+            "pattern": "^[a-z0-9][a-z0-9_.\\-]{0,63}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "locked_hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Locked Hint"
+          },
+          "next_event": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z0-9][a-z0-9_.\\-]{0,63}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Next Event"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Result"
+          },
+          "text": {
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ],
+        "title": "Choice",
+        "type": "object"
+      },
+      "EventDefinition": {
+        "additionalProperties": false,
+        "properties": {
+          "choices": {
+            "items": {
+              "$ref": "#/$defs/Choice"
+            },
+            "minItems": 1,
+            "title": "Choices",
+            "type": "array"
+          },
+          "compatible_versions": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Compatible Versions",
+            "type": "array"
+          },
+          "conditions": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Conditions"
+          },
+          "event_type": {
+            "default": "event",
+            "enum": [
+              "event",
+              "node"
+            ],
+            "title": "Event Type",
+            "type": "string"
+          },
+          "id": {
+            "pattern": "^[a-z0-9][a-z0-9_.\\-]{0,63}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "lifecycle": {
+            "$ref": "#/$defs/Lifecycle"
+          },
+          "narrative": {
+            "minLength": 1,
+            "title": "Narrative",
+            "type": "string"
+          },
+          "title": {
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "trigger": {
+            "additionalProperties": true,
+            "title": "Trigger",
+            "type": "object"
+          },
+          "version": {
+            "default": 1,
+            "minimum": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "narrative",
+          "choices"
+        ],
+        "title": "EventDefinition",
+        "type": "object"
+      },
+      "Lifecycle": {
+        "additionalProperties": false,
+        "description": "How often an event may occur.\n\nonce_per_life    at most one occurrence per character life (default)\nrepeatable       up to max_occurrences per life, at least cooldown_years apart\ncampaign_unique  at most one occurrence in the whole campaign, across lives\nAn open (pending/presented) instance blocks another of the same event in every mode.\n\nAn event is an encounter: once triggered its window stays up, and the player cannot Age Up or act,\nuntil it is resolved. The one explicit exception is `skippable: true`: the player may Age Up past\nit, and it is withdrawn once `expires_after_years` have passed (it stays until resolved if that is\nomitted). Skippable events queue behind blocking ones.",
+        "properties": {
+          "cooldown_years": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Cooldown Years",
+            "type": "integer"
+          },
+          "expires_after_years": {
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Expires After Years"
+          },
+          "max_occurrences": {
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Max Occurrences"
+          },
+          "mode": {
+            "default": "once_per_life",
+            "enum": [
+              "once_per_life",
+              "repeatable",
+              "campaign_unique"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "skippable": {
+            "default": false,
+            "title": "Skippable",
+            "type": "boolean"
+          }
+        },
+        "title": "Lifecycle",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "events": {
+        "items": {
+          "$ref": "#/$defs/EventDefinition"
+        },
+        "title": "Events",
+        "type": "array"
+      },
+      "schema_version": {
+        "const": 1,
+        "default": 1,
+        "title": "Schema Version",
+        "type": "integer"
+      }
+    },
+    "title": "EventFile",
+    "type": "object"
+  },
+  "trigger_types": {
+    "action": {
+      "doc": "Fires on an 'action' scan whose payload names this action: {\"action\": \"work\"}.",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "minLength": 1,
+            "title": "Action",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "ActionTriggerParams",
+        "type": "object"
+      }
+    },
+    "age": {
+      "doc": "Fires on an 'age' scan once the character's age is inside [min_age, max_age].",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "max_age": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Max Age"
+          },
+          "min_age": {
+            "minimum": 0,
+            "title": "Min Age",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "min_age"
+        ],
+        "title": "AgeTriggerParams",
+        "type": "object"
+      }
+    },
+    "manual": {
+      "doc": "Never fires by itself; only started explicitly (API call or a start_event effect).",
+      "params": {
+        "additionalProperties": false,
+        "properties": {},
+        "title": "NoParams",
+        "type": "object"
+      }
+    },
+    "state": {
+      "doc": "Fires on a 'state' scan whenever the event's eligibility conditions hold.",
+      "params": {
+        "additionalProperties": false,
+        "properties": {},
+        "title": "NoParams",
+        "type": "object"
+      }
+    }
+  }
+}

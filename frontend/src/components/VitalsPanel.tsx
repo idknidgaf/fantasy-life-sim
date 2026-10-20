@@ -4,6 +4,8 @@ import type { Character } from '../types'
 interface Props {
   character: Character
   busy: boolean
+  /** A legacy or blocking story event is waiting for a decision: Age Up is unavailable. */
+  eventPending: boolean
   onAdvance: () => void
 }
 
@@ -41,12 +43,12 @@ function VitalBar({
   )
 }
 
-export default function VitalsPanel({ character, busy, onAdvance }: Props) {
+export default function VitalsPanel({ character, busy, eventPending, onAdvance }: Props) {
   const dead = !character.alive
   const remaining = character.actions_remaining
   const budget = character.action_budget
   const taken = character.actions_taken_labels
-  const canAge = !dead && !character.pending_event
+  const canAge = !dead && !eventPending
 
   return (
     <aside className="vitals-panel">

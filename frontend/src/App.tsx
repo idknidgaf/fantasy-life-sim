@@ -6,18 +6,20 @@ import EventLog from './components/EventLog'
 import EventPanel from './components/EventPanel'
 import LifeTab from './components/LifeTab'
 import NavSidebar, { type Tab } from './components/NavSidebar'
+import StoryEventPanel from './components/StoryEventPanel'
 import StartScreen from './components/StartScreen'
 import VitalsPanel from './components/VitalsPanel'
-import type { Campaign, Character, HistoryEntry, Option, Species } from './types'
+import type { Campaign, Character, HistoryEntry, Option, Species, StoryEvent } from './types'
 
 /** Everything the game screen needs, fetched from the active campaign. */
 async function loadActive() {
-  const [character, actions, history] = await Promise.all([
+  const [character, actions, history, storyEvents] = await Promise.all([
     api.getCharacter(),
     api.getActions(),
     api.getHistory(),
+    api.getPendingStoryEvents().catch(() => [] as StoryEvent[]),
   ])
-  return { character, actions, history }
+  return { character, actions, history, storyEvents }
 }
 
 export default function App() {
@@ -27,6 +29,7 @@ export default function App() {
   const [character, setCharacter] = useState<Character | null>(null)
   const [actions, setActions] = useState<Option[]>([])
   const [history, setHistory] = useState<HistoryEntry[]>([])
+  const [storyEvents, setStoryEvents] = useState<StoryEvent[]>([])
   const [prevStats, setPrevStats] = useState<Record<string, number> | null>(null)
   const [tab, setTab] = useState<Tab>('character')
   const [inMenu, setInMenu] = useState(true)
@@ -54,6 +57,7 @@ export default function App() {
           setCharacter(s.character)
           setActions(s.actions)
           setHistory(s.history)
+          setStoryEvents(s.storyEvents)
           setInMenu(false)
         }
       } catch (e) {
@@ -85,6 +89,7 @@ export default function App() {
     setCharacter(s.character)
     setActions(s.actions)
     setHistory(s.history)
+    setStoryEvents(s.storyEvents)
     setPrevStats(previous)
     setInMenu(false)
   }
@@ -126,6 +131,15 @@ export default function App() {
   const resolveEvent = (eventId: string, choiceId: string) =>
     change(() => api.resolveEvent(eventId, choiceId))
 
+  // The backend orders the queue and presents only its head, and nothing while a legacy event is pending.
+  const currentStoryEvent = storyEvents[0]?.status === 'presented' ? storyEvents[0] : null
+  // Encounters stop time: Age Up and the tabs are unavailable until they are resolved. A skippable
+  // story event is the explicit exception.
+  const eventPending = !!character?.pending_event || storyEvents.some((e) => !e.skippable)
+
+  const resolveStoryEvent = (instanceId: number, choiceId: string) =>
+    change(() => api.resolveStoryEvent(instanceId, choiceId))
+
   // When actions are taken, switch to Life tab so the user sees their action budget.
   const onAction = (id: string) => {
     void performAction(id)
@@ -162,7 +176,12 @@ export default function App() {
       ) : (
         <main className="game-layout">
           <aside className="sidebar-left">
-            <NavSidebar activeTab={tab} onTabChange={setTab} character={character} />
+            <NavSidebar
+              activeTab={tab}
+              onTabChange={setTab}
+              character={character}
+              eventPending={eventPending}
+            />
           </aside>
 
           <section className="content-main">
@@ -170,6 +189,8 @@ export default function App() {
               <DeathSummary summary={character.summary} onNewLife={goToMenu} />
             ) : character.pending_event ? (
               <EventPanel event={character.pending_event} busy={busy} onChoose={resolveEvent} />
+            ) : currentStoryEvent ? (
+              <StoryEventPanel event={currentStoryEvent} busy={busy} onChoose={resolveStoryEvent} />
             ) : tab === 'character' ? (
               <CharacterSheet
                 character={character}
@@ -187,7 +208,12 @@ export default function App() {
           </section>
 
           <aside className="sidebar-right">
-            <VitalsPanel character={character} busy={busy} onAdvance={advanceTurn} />
+            <VitalsPanel
+              character={character}
+              busy={busy}
+              eventPending={eventPending}
+              onAdvance={advanceTurn}
+            />
             <EventLog history={history} />
           </aside>
         </main>

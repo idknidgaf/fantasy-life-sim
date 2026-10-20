@@ -4,16 +4,19 @@ from typing import Callable
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from sqlmodel import Session, select
+from sqlmodel import Session, delete, select
 
 from . import engine as sim
 from .content import STATS, get_content
 from .db import get_session, init_db
-from .models import Campaign, CharacterRecord
+from .models import Campaign, CharacterRecord, StoryChoiceLog, StoryEventInstance, StoryFlag
 from .rules import (
     alignment_label, describe_trait_effects, effective_stat, max_health, pretty, species_of,
     stage_name, stage_of,
 )
+from .story import service as story_service
+from .story.api import make_router as make_story_router
+from .story.library import get_story_library
 from .schemas import (
     AxisRead, CampaignCreate, CampaignRead, CharacterRead, HistoryEntryRead, ItemRead,
     OptionRead, PendingEventRead, SpeciesBrief, SpeciesRead, StageRead, TalentRead, TraitRead,
@@ -23,6 +26,7 @@ from .schemas import (
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     get_content()          # fail fast if any content file is invalid
+    get_story_library()
     init_db()
     yield
 
@@ -121,9 +125,17 @@ def _campaign_read(session: Session, campaign: Campaign) -> CampaignRead:
     )
 
 
-def _mutate(session: Session, change: Callable[[sim.Character, int], None]) -> CharacterRead:
-    """Load the active character, apply a rule from the engine, save, return it."""
+def _mutate(session: Session, change: Callable[[sim.Character, int], None], *,
+            story_scans: Callable[[], list[tuple[str, dict]]] | None = None,
+            blocked_by_story: bool = False) -> CharacterRead:
+    """Load the active character, apply a rule from the engine, save, return it.
+
+    blocked_by_story: refuse while a story event waits for a decision (as for a legacy pending event).
+    story_scans: story trigger scans to run after the change, in the same transaction as the save.
+    """
     campaign, rec = _active(session)
+    if blocked_by_story and rec.alive and story_service.has_open_events(session, rec):
+        raise HTTPException(409, "An event needs your decision first")
     c = sim.repair(rec.to_character())
     try:
         change(c, campaign.seed)
@@ -133,6 +145,8 @@ def _mutate(session: Session, change: Callable[[sim.Character, int], None]) -> C
         raise HTTPException(409, str(e))
     rec.update_from(c)
     session.add(rec)
+    if story_scans and c.alive:                      # queue eligible story events; never touches pending_event
+        story_service.run_scans(story_service.make_context(session, rec), story_scans())
     session.commit()
     session.refresh(rec)
     return _character_read(rec)
@@ -178,7 +192,11 @@ def create_campaign(body: CampaignCreate, session: Session = Depends(get_session
     campaign = Campaign(name=(body.campaign_name or name).strip(), seed=seed, active=True)
     session.add(campaign)
     session.flush()
-    session.add(CharacterRecord.from_character(campaign.id, character))
+    record = CharacterRecord.from_character(campaign.id, character)
+    session.add(record)
+    session.flush()
+    # The story can begin at birth: offer anything already eligible, in the same transaction.
+    story_service.run_scans(story_service.make_context(session, record), [("age", {}), ("state", {})])
     session.commit()
     session.refresh(campaign)
     return _campaign_read(session, campaign)
@@ -214,6 +232,8 @@ def delete_campaign(campaign_id: int, session: Session = Depends(get_session)):
     campaign = session.get(Campaign, campaign_id)
     if campaign is None:
         raise HTTPException(404, "Campaign not found")
+    for story_table in (StoryChoiceLog, StoryEventInstance, StoryFlag):      # story state belongs to the life
+        session.exec(delete(story_table).where(story_table.campaign_id == campaign_id))
     for rec in session.exec(select(CharacterRecord).where(CharacterRecord.campaign_id == campaign_id)):
         session.delete(rec)
     session.delete(campaign)
@@ -231,22 +251,29 @@ def get_character(session: Session = Depends(get_session)):
 @api.get("/actions", response_model=list[OptionRead])
 def list_actions(session: Session = Depends(get_session)):
     campaign, rec = _active(session)
+    if rec.alive and story_service.has_open_events(session, rec):
+        return []                                    # like a pending legacy event: decide first
     return sim.offer_actions(sim.repair(rec.to_character()), campaign.seed)
 
 
 @api.post("/actions/{action_id}", response_model=CharacterRead)
 def perform_action(action_id: str, session: Session = Depends(get_session)):
-    return _mutate(session, lambda c, seed: sim.perform_action(c, seed, action_id))
+    return _mutate(session, lambda c, seed: sim.perform_action(c, seed, action_id),
+                   blocked_by_story=True,
+                   story_scans=lambda: [("action", {"action": action_id}), ("state", {})])
 
 
 @api.post("/turn/advance", response_model=CharacterRead)
 def advance_turn(session: Session = Depends(get_session)):
-    return _mutate(session, sim.advance_turn)
+    return _mutate(session, sim.advance_turn, blocked_by_story=True,
+                   story_scans=lambda: [("age", {}), ("state", {})])
 
 
 @api.post("/events/{event_id}/choices/{choice_id}", response_model=CharacterRead)
 def resolve_event(event_id: str, choice_id: str, session: Session = Depends(get_session)):
-    return _mutate(session, lambda c, seed: sim.resolve_event(c, seed, event_id, choice_id))
+    # A decision can change the character's state, so story encounters it unlocks appear right away.
+    return _mutate(session, lambda c, seed: sim.resolve_event(c, seed, event_id, choice_id),
+                   story_scans=lambda: [("state", {})])
 
 
 @api.get("/history", response_model=list[HistoryEntryRead])
@@ -259,4 +286,9 @@ def get_history(
     return history[-limit:] if limit else history
 
 
+def _active_record(session: Session = Depends(get_session)) -> CharacterRecord:
+    return _active(session)[1]
+
+
+api.include_router(make_story_router(_active_record))
 app.include_router(api)

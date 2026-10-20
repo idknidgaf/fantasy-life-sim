@@ -6,10 +6,11 @@ interface Props {
   activeTab: Tab
   onTabChange: (tab: Tab) => void
   character: Character
+  /** A legacy or blocking story event is waiting for a decision. */
+  eventPending: boolean
 }
 
-export default function NavSidebar({ activeTab, onTabChange, character }: Props) {
-  const eventPending = !!character.pending_event
+export default function NavSidebar({ activeTab, onTabChange, character, eventPending }: Props) {
   const dead = !character.alive
 
   return (

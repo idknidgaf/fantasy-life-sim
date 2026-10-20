@@ -5,3 +5,4 @@ Frontend:  cd frontend && npm run dev
 API docs:  http://localhost:8000/docs
 Tests:     cd backend && python -m pytest -v
 Content:   cd backend && python -m app.validate_content      (see docs/CONTENT_GUIDE.md)
+Story engine: see docs/STORY_ENGINE.md

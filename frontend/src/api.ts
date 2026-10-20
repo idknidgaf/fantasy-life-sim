@@ -1,4 +1,6 @@
-import type { Campaign, Character, HistoryEntry, Option, Species } from './types'
+import type {
+  Campaign, Character, HistoryEntry, Option, Species, StoryEvent, StoryResolution,
+} from './types'
 
 const BASE: string = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
@@ -49,4 +51,9 @@ export const api = {
   resolveEvent: (eventId: string, choiceId: string) =>
     post<Character>(`/events/${enc(eventId)}/choices/${enc(choiceId)}`),
   getHistory: () => request<HistoryEntry[]>('/history'),
+
+  // Data-driven story engine
+  getPendingStoryEvents: () => request<StoryEvent[]>('/story/events/pending'),
+  resolveStoryEvent: (instanceId: number, choiceId: string) =>
+    post<StoryResolution>(`/story/instances/${instanceId}/choices/${enc(choiceId)}`),
 }
