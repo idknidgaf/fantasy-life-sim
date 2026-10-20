@@ -105,6 +105,7 @@ class TraitModifiers(Strict):
     skill_aptitude: dict[str, float] = {}
     mortality: float = Field(default=1.0, gt=0)
     heal_bonus: float = Field(default=0.0, ge=0)   # extra max-health fraction healed each Age Up
+    power: float = Field(default=0.0, ge=-1.0)     # percentage Power modifier as a decimal (0.1 = +10%); additive
     unlock_skills: list[str] = []
 
 

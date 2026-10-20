@@ -163,3 +163,48 @@ export interface StoryResolution {
   next_skipped_reason: string | null
   triggered_events: string[]
 }
+
+/** Power breakdown from GET /api/power. The frontend only renders it; every number is computed by the backend. */
+export interface PowerLine {
+  source_type: string
+  source_id: string
+  label: string
+  value: number
+  detail: string
+  inputs: Record<string, number>
+  sources: string[]
+}
+
+export interface PowerComponent {
+  key: string
+  label: string
+  total: number
+  implemented: boolean
+  note: string
+  lines: PowerLine[]
+}
+
+export interface PowerModifiers {
+  total: number
+  multiplier: number
+  percent_text: string
+  note: string
+  lines: PowerLine[]
+}
+
+export interface PowerFormula {
+  general: string
+  substituted: string
+  result: string
+}
+
+export interface PowerBreakdown {
+  total: number
+  subtotal: number
+  stats: PowerComponent
+  equipment: PowerComponent
+  skills: PowerComponent
+  modifiers: PowerModifiers
+  formula: PowerFormula
+  notes: string[]
+}

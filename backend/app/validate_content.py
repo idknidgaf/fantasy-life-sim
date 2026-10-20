@@ -2,6 +2,7 @@
 import sys
 
 from .content import ContentError, load_content
+from .power import load_power_config
 from .story.errors import StoryContentError
 from .story.library import load_library
 
@@ -19,6 +20,12 @@ def main() -> int:
     )
     for w in ct.warnings:
         print(f"  warning: {w}")
+    try:
+        power = load_power_config(ct)
+    except ContentError as e:
+        print("POWER CONFIG INVALID\n" + str(e))
+        return 1
+    print(f"OK: power.yaml ({len(power.specialised_stats)} specialised stats, {len(power.skill_power)} skill bonuses)")
     try:
         story = load_library(content=ct)
     except StoryContentError as e:

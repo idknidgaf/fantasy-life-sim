@@ -6,20 +6,24 @@ import EventLog from './components/EventLog'
 import EventPanel from './components/EventPanel'
 import LifeTab from './components/LifeTab'
 import NavSidebar, { type Tab } from './components/NavSidebar'
+import PowerTab from './components/PowerTab'
 import StoryEventPanel from './components/StoryEventPanel'
 import StartScreen from './components/StartScreen'
 import VitalsPanel from './components/VitalsPanel'
-import type { Campaign, Character, HistoryEntry, Option, Species, StoryEvent } from './types'
+import type {
+  Campaign, Character, HistoryEntry, Option, PowerBreakdown, Species, StoryEvent,
+} from './types'
 
 /** Everything the game screen needs, fetched from the active campaign. */
 async function loadActive() {
-  const [character, actions, history, storyEvents] = await Promise.all([
+  const [character, actions, history, storyEvents, power] = await Promise.all([
     api.getCharacter(),
     api.getActions(),
     api.getHistory(),
     api.getPendingStoryEvents().catch(() => [] as StoryEvent[]),
+    api.getPower().catch(() => null as PowerBreakdown | null),
   ])
-  return { character, actions, history, storyEvents }
+  return { character, actions, history, storyEvents, power }
 }
 
 export default function App() {
@@ -30,6 +34,7 @@ export default function App() {
   const [actions, setActions] = useState<Option[]>([])
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [storyEvents, setStoryEvents] = useState<StoryEvent[]>([])
+  const [power, setPower] = useState<PowerBreakdown | null>(null)
   const [prevStats, setPrevStats] = useState<Record<string, number> | null>(null)
   const [tab, setTab] = useState<Tab>('character')
   const [inMenu, setInMenu] = useState(true)
@@ -58,6 +63,7 @@ export default function App() {
           setActions(s.actions)
           setHistory(s.history)
           setStoryEvents(s.storyEvents)
+          setPower(s.power)
           setInMenu(false)
         }
       } catch (e) {
@@ -90,6 +96,7 @@ export default function App() {
     setActions(s.actions)
     setHistory(s.history)
     setStoryEvents(s.storyEvents)
+          setPower(s.power)
     setPrevStats(previous)
     setInMenu(false)
   }
@@ -197,6 +204,8 @@ export default function App() {
                 prevStats={prevStats}
                 skillCategories={skillCategories}
               />
+            ) : tab === 'power' ? (
+              <PowerTab power={power} />
             ) : (
               <LifeTab
                 character={character}

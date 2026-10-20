@@ -1,0 +1,47 @@
+# Power configuration. See docs/POWER.md for the formula and the reasoning.
+#
+#   Final Power = (Stats Power + Equipment Power + Skill Power) x (1 + Total Modifier)
+#
+# BASE STATS (strength, dexterity, constitution, wisdom, charisma) are NOT part of Power. They are for event
+# checks and encounters. Only the SPECIALISED STATS below feed Stats Power:
+#
+#   Stats Power = sum over specialised stats of  weight x value
+#
+# specialised_stats   id -> definition
+#     name     display name
+#     purpose  what it is for (documentation)
+#     weight   Power per point of the stat (1.0 = 1:1)
+#     skills   the character skills (c.skills, see skills.json) the stat's value is made of; their levels are
+#              added together. A skill may feed only one specialised stat.
+#
+# To add a specialised stat later (for example vampire_blood or demon_soul) add an entry here. No code changes.
+#
+# skill_power   Raw Power added for each UNLOCKED skill (level > 0), flat, by skill id. Empty on purpose: no skill
+#               grants a flat Power bonus yet. A skill listed under specialised_stats cannot also be listed here
+#               (that would count the same skill twice).
+#
+# There is no equipment table: the game has no equipment slots yet, so Equipment Power is 0.
+
+specialised_stats:
+  swordsmanship:
+    name: Swordsmanship
+    purpose: Sword-based combat
+    weight: 1.0
+    skills: [swordsmanship]
+  marksmanship:
+    name: Marksmanship
+    purpose: Ranged combat, bows, crossbows and similar weapons
+    weight: 1.0
+    skills: [archery]            # the existing archery skill; its id is kept so saved characters are unchanged
+  magic:
+    name: Magic
+    purpose: Magical combat and spellcasting
+    weight: 1.0
+    skills: [elemental_magic, spirit_magic, necromancy, enchantment]     # the schools of magic, added together
+  martial_arts:
+    name: Martial Arts
+    purpose: Unarmed combat, fists and physical fighting techniques
+    weight: 1.0
+    skills: [martial_arts]
+
+skill_power: {}

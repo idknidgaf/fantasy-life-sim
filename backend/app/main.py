@@ -14,6 +14,7 @@ from .rules import (
     alignment_label, describe_trait_effects, effective_stat, max_health, pretty, species_of,
     stage_name, stage_of,
 )
+from .power import PowerBreakdown, calculate_power
 from .story import service as story_service
 from .story.api import make_router as make_story_router
 from .story.library import get_story_library
@@ -274,6 +275,13 @@ def resolve_event(event_id: str, choice_id: str, session: Session = Depends(get_
     # A decision can change the character's state, so story encounters it unlocks appear right away.
     return _mutate(session, lambda c, seed: sim.resolve_event(c, seed, event_id, choice_id),
                    story_scans=lambda: [("state", {})])
+
+
+@api.get("/power", response_model=PowerBreakdown)
+def get_power(session: Session = Depends(get_session)):
+    """The active character's Power and how it was derived. Calculated fresh from current state each call."""
+    _, rec = _active(session)
+    return calculate_power(sim.repair(rec.to_character()), get_content())
 
 
 @api.get("/history", response_model=list[HistoryEntryRead])

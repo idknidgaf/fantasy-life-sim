@@ -326,3 +326,16 @@ fieldset.species-grid { border: none; padding: 0; margin: 0; display: grid; gap:
 .log p.kind-hint { color: #b9a8e8; font-style: italic; }
 .log p.kind-awakening { color: var(--gold); font-weight: 600; background: #2b2412; border-left: 3px solid var(--gold); padding: 0.4rem 0.6rem; border-radius: 0 6px 6px 0; }
 .log p.kind-trait { color: var(--green); }
+
+/* ---- Power tab ---- */
+.power-total { font-size: 2.6rem; font-weight: 700; color: var(--gold); line-height: 1.1; margin-top: 0.4rem; }
+.power-formula {
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 0.7rem 0.9rem; margin: 0.75rem 0; font-variant-numeric: tabular-nums;
+}
+.power-result { color: var(--gold); font-weight: 600; }
+.power-part { margin-top: 1rem; }
+.power-part h4 { margin: 0 0 0.3rem; display: flex; align-items: baseline; gap: 0.5rem; }
+.power-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.power-table td { padding: 0.2rem 0.4rem; border-bottom: 1px solid var(--border); }
+.power-num { text-align: right; font-weight: 600; white-space: nowrap; }

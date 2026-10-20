@@ -135,6 +135,8 @@ def describe_trait_effects(t, ct: Content) -> str:
         parts.append(f"×{t.modifiers.mortality:g} mortality")
     if t.modifiers.heal_bonus:
         parts.append(f"Each Age Up heals +{t.modifiers.heal_bonus:.0%} more")
+    if t.modifiers.power:
+        parts.append(f"{t.modifiers.power:+.0%} Power")
     for skill in t.modifiers.unlock_skills:
         parts.append(f"Unlocks {pretty(skill)}")
     for ability in t.abilities:

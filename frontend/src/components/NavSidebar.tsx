@@ -1,6 +1,6 @@
 import type { Character } from '../types'
 
-export type Tab = 'character' | 'life'
+export type Tab = 'character' | 'life' | 'power'
 
 interface Props {
   activeTab: Tab
@@ -30,6 +30,14 @@ export default function NavSidebar({ activeTab, onTabChange, character, eventPen
       >
         <span className="nav-icon">✦</span>
         <span className="nav-label">Life</span>
+      </button>
+      <button
+        className={`nav-tab${activeTab === 'power' ? ' active' : ''}`}
+        disabled={eventPending || dead}
+        onClick={() => onTabChange('power')}
+      >
+        <span className="nav-icon">⚡</span>
+        <span className="nav-label">Power</span>
       </button>
     </nav>
   )
