@@ -172,7 +172,7 @@
       result: It flickers, and for a moment it is yours.
       effects:
         - skill_xp: {concentration: 1.5}
-        - skill_xp: {elemental_magic: 1}
+        - skill_xp: {magic: 1}
           chance: 0.3
         - axis_delta: {curiosity: 5}
     - id: ignore

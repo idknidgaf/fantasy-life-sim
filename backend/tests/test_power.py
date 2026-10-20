@@ -65,7 +65,7 @@ def test_shipped_specialised_stats_and_one_to_one_weights():
 
 def test_each_specialised_stat_counts_one_to_one():
     for stat, skill in (("swordsmanship", "swordsmanship"), ("marksmanship", "archery"),
-                        ("magic", "elemental_magic"), ("martial_arts", "martial_arts")):
+                        ("magic", "magic"), ("martial_arts", "martial_arts")):
         b = calculate_power(char({skill: 37.5}), CT, CFG)
         line = next(l for l in b.stats.lines if l.source_id == stat)
         assert line.value == 37.5 and line.inputs == {"value": 37.5, "weight": 1.0}
@@ -73,22 +73,28 @@ def test_each_specialised_stat_counts_one_to_one():
 
 
 def test_spec_example_100_swordsmanship_and_100_magic_is_200():
-    b = calculate_power(char({"swordsmanship": 100, "elemental_magic": 100}), CT, CFG)
+    b = calculate_power(char({"swordsmanship": 100, "magic": 100}), CT, CFG)
     assert b.stats.total == 200 and b.total == 200
     assert b.formula.substituted == "Final Power = (200 + 0 + 0) × (1 + 0)"
 
 
 def test_stats_power_is_the_plain_sum_of_the_four():
-    b = calculate_power(char({"swordsmanship": 10, "archery": 20, "spirit_magic": 30, "martial_arts": 40}), CT, CFG)
+    b = calculate_power(char({"swordsmanship": 10, "archery": 20, "magic": 30, "martial_arts": 40}), CT, CFG)
     assert [l.value for l in b.stats.lines] == [10, 20, 30, 40]
     assert b.stats.total == 100 and b.stats.implemented
 
 
-def test_magic_adds_up_its_schools():
-    b = calculate_power(char({"elemental_magic": 30, "spirit_magic": 20, "necromancy": 5, "enchantment": 1}), CT, CFG)
+def test_magic_is_a_single_specialised_stat_fed_by_one_skill():
+    assert CFG.specialised_stats["magic"].skills == ["magic"]
+    b = calculate_power(char({"magic": 56}), CT, CFG)
     magic = next(l for l in b.stats.lines if l.source_id == "magic")
-    assert magic.value == 56 and len(magic.sources) == 4                          # each school shown as a source
-    assert "Elemental Magic 30" in magic.sources
+    assert magic.value == 56 and magic.sources == ["Magic 56"]
+
+
+def test_removed_magic_schools_no_longer_add_power():
+    """A leftover school id on a character (it should have been migrated) must not count towards Power."""
+    legacy = {"elemental_magic": 30, "spirit_magic": 20, "necromancy": 5, "enchantment": 1}
+    assert calculate_power(char(legacy), CT, CFG).total == 0
 
 
 def test_all_four_are_listed_even_at_zero_so_the_breakdown_is_complete():
@@ -163,7 +169,7 @@ def test_weight_is_configurable_and_zero_weight_contributes_nothing():
     cfg = CFG.model_copy(deep=True)
     cfg.specialised_stats["swordsmanship"].weight = 2.5
     cfg.specialised_stats["magic"].weight = 0
-    b = calculate_power(char({"swordsmanship": 10, "elemental_magic": 50}), CT, cfg)
+    b = calculate_power(char({"swordsmanship": 10, "magic": 50}), CT, cfg)
     assert b.stats.total == 25 and [l.source_id for l in b.stats.lines].count("magic") == 0
 
 
@@ -183,7 +189,7 @@ def test_final_formula_with_all_components_and_modifiers():
 
 
 def test_spec_example_with_modifiers():
-    b = calculate_power(char({"swordsmanship": 100, "elemental_magic": 100}), CT, CFG,
+    b = calculate_power(char({"swordsmanship": 100, "magic": 100}), CT, CFG,
                         PowerProviders(modifiers=mods(0.25)))
     assert b.stats.total == 200 and b.total == pytest.approx(250)
 

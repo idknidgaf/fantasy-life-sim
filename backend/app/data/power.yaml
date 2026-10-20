@@ -37,7 +37,7 @@ specialised_stats:
     name: Magic
     purpose: Magical combat and spellcasting
     weight: 1.0
-    skills: [elemental_magic, spirit_magic, necromancy, enchantment]     # the schools of magic, added together
+    skills: [magic]              # a single skill. Spells that add Power directly are a future addition
   martial_arts:
     name: Martial Arts
     purpose: Unarmed combat, fists and physical fighting techniques

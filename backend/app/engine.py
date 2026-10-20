@@ -18,7 +18,7 @@ from .content import STATS, Content, get_content
 from .rules import (
     BASE_AGE_UP_HEAL, alignment_label, apply_effects, change_happiness, change_health,
     clamp_stat, clamp_vital, conditions_met, effective_stat, gain_skill, gain_stress,
-    grant_trait, has_ability, heal_bonus, max_health, mortality_multiplier, pretty,
+    grant_trait, has_ability, heal_bonus, max_health, migrate_skills, mortality_multiplier, pretty,
     queue_event, requirements_met, skill_aptitude, species_of, stage_of, trainable_skills,
     unmet_requirements_text,
 )
@@ -444,6 +444,7 @@ def repair(c: Character) -> Character:
     if c.pending_event and c.pending_event not in ct.events:
         c.pending_event = None
     c.queued_events = [e for e in c.queued_events if e in ct.events]
+    c.skills = migrate_skills(c.skills, ct)                  # merged or removed skills (the old magic schools)
     for axis in ct.axes:
         c.axes.setdefault(axis, 0)
     if c.location not in species_of(c, ct).habitats and not c.location:

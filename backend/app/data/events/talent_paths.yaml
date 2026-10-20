@@ -84,7 +84,7 @@
       result: You open yourself wide, and ancient power pours in.
       effects:
         - flag: primordial_embraced
-        - skill_xp: {elemental_magic: 5}
+        - skill_xp: {magic: 5}
         - skill_xp: {soul_control: 3}
         - stat_delta: {strength: 2}
     - id: shape

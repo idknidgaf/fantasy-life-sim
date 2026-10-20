@@ -1,6 +1,6 @@
 {
   "combat":  ["swordsmanship", "archery", "martial_arts", "tactics"],
-  "magic":   ["elemental_magic", "spirit_magic", "necromancy", "enchantment"],
+  "magic":   ["magic"],
   "survival":["exploration", "tracking", "stealth", "survival"],
   "mental":  ["concentration", "willpower", "mental_resistance", "knowledge"],
   "social":  ["command", "negotiation", "deception", "intimidation"],

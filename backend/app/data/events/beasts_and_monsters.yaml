@@ -161,7 +161,7 @@
         result: The power floods through you, and you hold it. You are changed.
         effects:
           - flag: touched_primal_source
-          - skill_xp: {elemental_magic: 4}
+          - skill_xp: {magic: 4}
           - stat_delta: {wisdom: 2, constitution: 1}
       failure:
         result: It burns through you like lightning, and you are still standing, barely.

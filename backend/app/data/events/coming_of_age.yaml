@@ -18,14 +18,14 @@
         result: Months of careful study teach you something, and the whispers fade when you tell them to.
         effects:
           - skill_xp: {knowledge: 3}
-          - skill_xp: {necromancy: 2}
+          - skill_xp: {magic: 2}
             chance: 0.3
           - counter: {mental_trials: 1}
       failure:
         result: The whispers cling to you. You learn a great deal, and not all of it is wholesome.
         effects:
           - skill_xp: {knowledge: 1}
-          - skill_xp: {necromancy: 3}
+          - skill_xp: {magic: 3}
           - axis_delta: {good_evil: -4}
           - counter: {mental_trials: 1}
     - id: burn
@@ -77,7 +77,7 @@
         - consume_item: {tag: valuable_offering}
         - flag: altar_offering_made
         - grant_item: ancient_relic
-        - skill_xp: {spirit_magic: 3}
+        - skill_xp: {magic: 3}
     - id: leave
       text: Leave the altar undisturbed
       result: Some places should be left as you found them.

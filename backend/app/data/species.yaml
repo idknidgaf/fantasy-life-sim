@@ -69,7 +69,7 @@
   skill_aptitude: {survival: 1.2, alchemy: 1.4, soul_control: 1.3}
   innate_skills: {soul_control: 1}
   innate_traits: [regenerative]
-  allowed_skills: [survival, exploration, stealth, elemental_magic, spirit_magic, alchemy, soul_control, mental_resistance, willpower, concentration, knowledge]
+  allowed_skills: [survival, exploration, stealth, magic, alchemy, soul_control, mental_resistance, willpower, concentration, knowledge]
   tags: [amorphous, regenerating]
   habitats: [cavern, swamp]
   labels: {work: Absorb and digest, play: Ooze about, rest: Settle into a puddle}

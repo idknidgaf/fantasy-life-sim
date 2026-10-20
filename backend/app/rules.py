@@ -66,10 +66,26 @@ def skill_aptitude(c: Character, ct: Content, skill: str) -> float:
     sources = [species_of(c, ct).skill_aptitude] + [t.modifiers.skill_aptitude for t in trait_defs(c, ct)]
     mult = 1.0
     for source in sources:
-        for key in ("all", category, skill):
+        for key in dict.fromkeys(("all", category, skill)):     # a skill named like its category counts once
             if key in source:
                 mult *= source[key]
     return mult
+
+
+# The four schools of magic were merged into the single `magic` skill. Their levels are ADDED, which is exactly
+# how Power used to total them, so a saved character keeps the same Magic and the same Power.
+LEGACY_SKILLS = {"elemental_magic": "magic", "spirit_magic": "magic", "necromancy": "magic", "enchantment": "magic"}
+
+
+def migrate_skills(skills: dict[str, float], ct: Content) -> dict[str, float]:
+    """Bring a saved skill table up to date: fold renamed or merged skills into their successor and drop
+    any skill that no longer exists. Safe to run on every load (it is idempotent)."""
+    out: dict[str, float] = {}
+    for skill, level in skills.items():
+        target = LEGACY_SKILLS.get(skill, skill)
+        if target in ct.skills:
+            out[target] = round(out.get(target, 0.0) + level, 2)
+    return out
 
 
 def mortality_multiplier(c: Character, ct: Content) -> float:

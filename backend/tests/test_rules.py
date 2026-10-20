@@ -133,20 +133,23 @@ def test_skill_xp_is_scaled_by_aptitude():
     apply_effect({"skill_xp": {"archery": 10}}, human, CT, random.Random(1), [])
     assert human.skills["archery"] == pytest.approx(11.0)
     elf = make("elf")                                              # magic x1.25
-    assert skill_aptitude(elf, CT, "necromancy") == pytest.approx(1.25)
-    apply_effect({"skill_xp": {"necromancy": 8}}, elf, CT, random.Random(1), [])
-    assert elf.skills["necromancy"] == pytest.approx(10.0)
+    assert skill_aptitude(elf, CT, "magic") == pytest.approx(1.25)   # once, although skill and category share a name
+    apply_effect({"skill_xp": {"magic": 8}}, elf, CT, random.Random(1), [])
+    assert elf.skills["magic"] == pytest.approx(10.0)
     slime = make("slime")
     assert skill_aptitude(slime, CT, "alchemy") == pytest.approx(1.4)
 
 
 def test_skill_xp_by_category_goes_to_best_owned_skill():
-    c = make(skills={"necromancy": 5.0, "enchantment": 1.0})
-    apply_effect({"skill_xp": {"magic": 1}}, c, CT, random.Random(1), [])
-    assert c.skills["necromancy"] > 5.0 and c.skills["enchantment"] == 1.0
+    c = make(skills={"swordsmanship": 5.0, "tactics": 1.0})
+    apply_effect({"skill_xp": {"combat": 1}}, c, CT, random.Random(1), [])
+    assert c.skills["swordsmanship"] > 5.0 and c.skills["tactics"] == 1.0
     fresh = make(skills={})
-    apply_effect({"skill_xp": {"magic": 1}}, fresh, CT, random.Random(3), [])
-    assert len(fresh.skills) == 1 and CT.skills[next(iter(fresh.skills))] == "magic"
+    apply_effect({"skill_xp": {"combat": 1}}, fresh, CT, random.Random(3), [])
+    assert len(fresh.skills) == 1 and CT.skills[next(iter(fresh.skills))] == "combat"
+    magic = make(skills={})                                        # "magic" is also a skill, so it is used directly
+    apply_effect({"skill_xp": {"magic": 1}}, magic, CT, random.Random(3), [])
+    assert list(magic.skills) == ["magic"]
 
 
 def test_chance_gates_an_effect():

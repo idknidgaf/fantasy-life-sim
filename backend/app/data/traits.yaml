@@ -48,7 +48,7 @@
   modifiers: {stat: {strength: 2}}
   abilities: [life_drain]
   acquire:
-    - requirements: [{skill: necromancy, min_level: 15}, {axis: good_evil, max: -20}]
+    - requirements: [{skill: magic, min_level: 15}, {axis: good_evil, max: -20}]
       chance: 0.05
       narrative: Your studies and your conscience have both run dry, and something hungry has settled into you. You have gained Vampiric Edge.
 

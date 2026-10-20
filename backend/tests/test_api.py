@@ -73,7 +73,8 @@ def test_species_list(client):
 
 def test_skills_endpoint(client):
     skills = client.get("/api/skills").json()
-    assert skills["swordsmanship"] == "combat" and len(skills) == 28
+    assert skills["swordsmanship"] == "combat" and skills["magic"] == "magic" and len(skills) == 25
+    assert not {"elemental_magic", "spirit_magic", "necromancy", "enchantment"} & set(skills)
 
 
 # ---------- no campaign yet ----------

@@ -16,11 +16,11 @@ Strength check that unlocks a choice about a heavy rock). Nothing about them cha
 
 **Specialised stats** are combat proficiencies. Only these feed Stats Power.
 
-| Specialised stat | Purpose | Weight | Value comes from (existing skills, added together) |
+| Specialised stat | Purpose | Weight | Value comes from (the skill) |
 |---|---|---:|---|
 | Swordsmanship | Sword-based combat | 1.0 | `swordsmanship` |
 | Marksmanship | Ranged combat, bows, crossbows and similar weapons | 1.0 | `archery` |
-| Magic | Magical combat and spellcasting | 1.0 | `elemental_magic`, `spirit_magic`, `necromancy`, `enchantment` |
+| Magic | Magical combat and spellcasting | 1.0 | `magic` |
 | Martial Arts | Unarmed combat, fists and physical fighting techniques | 1.0 | `martial_arts` |
 
 They are kept separate from base stats in the data model: base stats are `Character.stats`, the specialised stats are
@@ -28,11 +28,15 @@ read from the character's skill levels (`Character.skills`). So **no new charact
 needed**, saved characters are unchanged, and the stats are trained by the game's existing actions and events.
 Marksmanship is the display name; the underlying skill id stays `archery` so saved data and existing content keep working.
 
+**Magic is one skill.** The old schools of magic (`elemental_magic`, `spirit_magic`, `necromancy`, `enchantment`) no
+longer exist. Saved characters are migrated when they load (`rules.migrate_skills`): the schools' levels are *added*
+into `magic`, exactly as Power used to total them, so Magic and Power are unchanged. Spells that add Power directly may
+come later; they are not part of this system yet.
+
 ## Components
 
 **Stats Power** = Swordsmanship + Marksmanship + Magic + Martial Arts, each at weight 1.0 (1:1). A character with 100
-Swordsmanship and 100 Magic has 200 Stats Power, whatever their base stats are. Magic is the sum of its four schools.
-All four stats are always listed in the breakdown, even at 0.
+Swordsmanship and 100 Magic has 200 Stats Power, whatever their base stats are. All four stats are always listed in the breakdown, even at 0.
 
 **Equipment Power** = sum of raw Power of equipped items. **There is no equipment system yet** (items are inventory
 counts; nothing is "equipped"), so this is `0`, and an item sitting in the inventory never counts.
