@@ -3,6 +3,7 @@ import sys
 
 from .content import ContentError, load_content
 from .combat import load_combat_config
+from .inheritance import load_inheritance_rules
 from .names import load_name_config
 from .npc import load_named_characters
 from .power import load_power_config
@@ -47,6 +48,12 @@ def main() -> int:
         print("NAMED CHARACTERS INVALID\n" + str(e))
         return 1
     print(f"OK: named_characters.yaml ({len(named)} named characters)")
+    try:
+        rules = load_inheritance_rules(ct, power)
+    except ContentError as e:
+        print("INHERITANCE RULES INVALID\n" + str(e))
+        return 1
+    print(f"OK: inheritance.yaml ({len(rules.crossings)} species crossings)")
     try:
         story = load_library(content=ct)
     except StoryContentError as e:
