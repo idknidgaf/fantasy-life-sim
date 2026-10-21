@@ -3,6 +3,8 @@ import sys
 
 from .content import ContentError, load_content
 from .combat import load_combat_config
+from .names import load_name_config
+from .npc import load_named_characters
 from .power import load_power_config
 from .story.errors import StoryContentError
 from .story.library import load_library
@@ -33,6 +35,18 @@ def main() -> int:
         print("COMBAT CONFIG INVALID\n" + str(e))
         return 1
     print(f"OK: combat.yaml (power floor {cfg.power_floor:g}, win chance {cfg.win_chance_floor:.0%}-{1 - cfg.win_chance_floor:.0%})")
+    try:
+        names = load_name_config(ct.species)
+    except ContentError as e:
+        print("NAMES CONFIG INVALID\n" + str(e))
+        return 1
+    print(f"OK: names.yaml ({len(names.cultures)} cultures)")
+    try:
+        named = load_named_characters(ct, power)
+    except ContentError as e:
+        print("NAMED CHARACTERS INVALID\n" + str(e))
+        return 1
+    print(f"OK: named_characters.yaml ({len(named)} named characters)")
     try:
         story = load_library(content=ct)
     except StoryContentError as e:
