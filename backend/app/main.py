@@ -12,6 +12,7 @@ from .combat import get_combat_config
 from .content import STATS, get_content
 from .db import get_session, init_db
 from .models import Campaign, CharacterRecord, CombatRecord, StoryChoiceLog, StoryEventInstance, StoryFlag
+from .npc_store import delete_campaign_npcs
 from .rules import (
     alignment_label, describe_trait_effects, effective_stat, max_health, pretty, species_of,
     stage_name, stage_of,
@@ -246,6 +247,7 @@ def delete_campaign(campaign_id: int, session: Session = Depends(get_session)):
         raise HTTPException(404, "Campaign not found")
     for story_table in (CombatRecord, StoryChoiceLog, StoryEventInstance, StoryFlag):      # story state belongs to the life
         session.exec(delete(story_table).where(story_table.campaign_id == campaign_id))
+    delete_campaign_npcs(session, campaign_id)             # its NPCs and their relationships belong to the life too
     for rec in session.exec(select(CharacterRecord).where(CharacterRecord.campaign_id == campaign_id)):
         session.delete(rec)
     session.delete(campaign)

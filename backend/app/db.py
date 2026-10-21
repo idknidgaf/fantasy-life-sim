@@ -34,6 +34,7 @@ def init_db(eng: Engine | None = None) -> None:
 
     eng = eng or engine
     SQLModel.metadata.create_all(eng)
+    _drop_orphaned_npcs(eng)
     inspector = inspect(eng)
     table = models.CharacterRecord.__tablename__
     existing = {c["name"] for c in inspector.get_columns(table)}
@@ -54,6 +55,16 @@ def init_db(eng: Engine | None = None) -> None:
         for column in missing:
             conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {ADDED_COLUMNS[column]}"))
     print(f"[save upgrade] added columns: {', '.join(missing)}")
+
+
+def _drop_orphaned_npcs(eng: Engine) -> None:
+    """NPCs and relationships whose campaign no longer exists. Deleting a campaign used to leave them behind, and
+    SQLite reuses campaign ids, so a new game could have inherited a deleted game's characters. Safe to repeat."""
+    from . import models
+    campaign = models.Campaign.__tablename__
+    with eng.begin() as conn:
+        for table in (models.CharacterRelationship.__tablename__, models.NpcRecord.__tablename__):
+            conn.execute(text(f"DELETE FROM {table} WHERE campaign_id NOT IN (SELECT id FROM {campaign})"))
 
 
 def get_session():

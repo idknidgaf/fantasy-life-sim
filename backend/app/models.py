@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Index, UniqueConstraint, event, text
+from sqlalchemy import CheckConstraint, Index, UniqueConstraint, event, text
 from sqlmodel import JSON, Column, Field, SQLModel
 
 from .character import Character
@@ -198,3 +198,29 @@ class NpcRecord(SQLModel, table=True):
     name: str
     age: int = 0
     data: dict = Field(default_factory=dict, sa_column=Column(JSON))
+
+
+class CharacterRelationship(SQLModel, table=True):
+    """One link between two characters, by their stable ids (see relationships.py, which validates every write).
+
+    parent / mentor are directed: source is the parent (or mentor), target the child (or mentee). partner, friend
+    and rival are symmetric and stored once with the two ids in sorted order, so (a, b) and (b, a) are one row.
+    An endpoint is a persisted NPC's id, or `pc_<n>` for the campaign's playable character.
+
+    The rules a database cannot express (two parents at most, no circular parentage, both ends exist) are checked in
+    code. The unique constraint makes a retried write harmless, and the check constraint is a backstop against a
+    character being related to itself. Foreign keys are not enforced by SQLite here, which is why deleting a
+    character or a campaign removes its links explicitly instead of relying on the database.
+    A new table, so existing saves need no migration.
+    """
+    __table_args__ = (
+        UniqueConstraint("campaign_id", "kind", "source_id", "target_id", name="uq_relationship_edge"),
+        CheckConstraint("source_id <> target_id", name="ck_relationship_not_self"),
+        Index("ix_relationship_source", "campaign_id", "source_id", "kind"),     # a character's children, mentees...
+        Index("ix_relationship_target", "campaign_id", "target_id", "kind"),     # a character's parents, mentors...
+    )
+    id: int | None = Field(default=None, primary_key=True)
+    campaign_id: int = Field(foreign_key="campaign.id")
+    kind: str
+    source_id: str
+    target_id: str
