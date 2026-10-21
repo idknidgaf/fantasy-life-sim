@@ -1,0 +1,63 @@
+# Inheritance rules. Read by app/inheritance.py; validated by `python -m app.validate_content`.
+#
+# Inheritance gives a child its STARTING APTITUDE. It never copies a parent: the child is a new character with a new
+# id and name, and develops through play like anyone else. Nothing here touches Power: Power is always calculated
+# from the child's skills and traits by the one Power system.
+#
+# Not inherited, because there is no rule for it here: items, titles, achievements, history, personality. Anything
+# like that needs its own explicit rule, added later.
+
+# ---- who can be a parent ----
+parents:
+  min_stage: young_adult        # a parent must have reached this life stage (scaled to their species' lifespan)
+  forbid_direct_line: true      # a parent and their own ancestor or descendant cannot have a child together
+  cannot_parent: []             # species that can never be a parent, e.g. [slime]
+
+# ---- species ----
+# A child of two parents of the SAME species is that species. A child of ONE parent is that parent's species.
+# A child of two DIFFERENT species is only possible if the pair is listed here (order does not matter); anything
+# else is refused. `offspring` is a weighted choice among the listed species.
+crossings:
+  - parents: [human, elf]
+    offspring: {human: 1, elf: 1}
+  - parents: [human, dwarf]
+    offspring: {human: 1, dwarf: 1}
+
+# ---- base stats (strength, dexterity, constitution, wisdom, charisma) ----
+# child stat = (1 - heritability) * a normal newborn roll + heritability * parent aptitude, then +/- variation.
+# Parent aptitude is the parent's stat without their species bonus (the average of the two parents). The result is
+# kept within start_bounds, then the CHILD's own species modifiers apply and the species' stat cap is enforced.
+stats:
+  heritability: 0.4             # 0 = parents have no influence, 1 = the child is entirely their average
+  variation: 5                  # extra random +/- on every stat
+  roll_range: [20, 60]          # the normal newborn range (the same one new characters and NPCs roll in)
+  start_bounds: [10, 75]        # a newborn's aptitude never starts outside this, whatever the parents
+
+# ---- specialised stats (Magic, Swordsmanship, Marksmanship, Martial Arts) ----
+# A small head start, never the parent's level: fraction * the parents' average level, at most max_start, and only
+# when the parents are trained enough to pass something on. Set fraction to 0 to turn it off.
+specialised:
+  fraction: 0.10
+  min_parent_level: 10
+  max_start: 10
+  variation: 0.25               # the head start is multiplied by a random 0.75..1.25
+
+# ---- traits ----
+# A trait is inheritable if it can be present at birth (it has a `birth:` rule) or is listed in `extra`, and is not in
+# `exclude`. Every parent who has one passes it on with the chance for its rarity tier (or its own entry in
+# `overrides`), rolled separately for each parent. A child gets at most max_inherited. Species traits are the
+# species' own and are never "inherited". Achievement traits are not eligible unless you list them.
+traits:
+  extra: []
+  exclude: []
+  chance: {common: 0.30, uncommon: 0.20, rare: 0.10, legendary: 0.02}
+  overrides: {}                 # trait id -> chance, e.g. {iron_constitution: 0.5}
+  max_inherited: 2
+
+# ---- talents ----
+# Talent potential, not the talent itself: each parent who has a hidden talent may pass the same talent on with
+# inherit_chance, if the child is eligible for it. A child holds one hidden talent at most, and it starts dormant.
+# With nothing inherited the child rolls like any newborn (base_chance).
+talent:
+  base_chance: 0.01
+  inherit_chance: 0.10
