@@ -339,3 +339,22 @@ fieldset.species-grid { border: none; padding: 0; margin: 0; display: grid; gap:
 .power-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .power-table td { padding: 0.2rem 0.4rem; border-bottom: 1px solid var(--border); }
 .power-num { text-align: right; font-weight: 600; white-space: nowrap; }
+
+/* ---- Combat: pre-battle warnings and the battle summary ---- */
+.combat-odds { color: var(--muted); font-size: 0.8rem; }
+.combat-warning { font-size: 0.82rem; font-weight: 600; }
+.combat-warning.caution { color: #f0d34a; }
+.combat-warning.danger { color: var(--red); }
+.choice.warn-caution { outline: 2px solid #f0d34a; outline-offset: 2px; }
+.choice.warn-danger { outline: 2px solid var(--red); outline-offset: 2px; background: #2c1b19; }
+.power-compare { font-variant-numeric: tabular-nums; margin: 0.6rem 0; }
+.battle.win { border-color: var(--green); }
+.battle.loss { border-color: var(--red); }
+.battle.flee { border-color: var(--blue); }
+.battle-outcome { margin: 0.2rem 0 0.4rem; }
+.battle-section { border-top: 1px solid var(--border); margin-top: 0.8rem; padding-top: 0.2rem; }
+.battle-section h3 { margin: 0.6rem 0 0.4rem; }
+.battle-lines { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.battle-lines li { background: var(--panel-2); border: 1px solid var(--border); border-radius: 99px; padding: 0.15rem 0.7rem; font-size: 0.9rem; }
+.battle-death { color: var(--red); font-weight: 600; }
+.battle-continue { margin-top: 1rem; width: 100%; padding: 0.7rem 1rem; }

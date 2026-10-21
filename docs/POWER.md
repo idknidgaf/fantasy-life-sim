@@ -78,4 +78,4 @@ match the backend model.
 
 ## Not implemented
 
-Combat, victory odds, defeat damage, fleeing, equipment or skill management screens, and any Power content.
+Equipment or skill management screens, and any Power content. Combat uses Power as-is: see `docs/COMBAT.md`.

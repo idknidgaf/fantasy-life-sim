@@ -117,9 +117,9 @@ def test_events_chain_and_second_wind():
     wins = 0
     for seed in range(300):
         t = make("human", seed=seed, age=20, traits=["second_wind"])
-        t.stats["strength"] = 1                            # near-certain failure without Second Wind
+        t.stats["charisma"] = 1                           # near-certain failure without Second Wind
         t.pending_event = "village_bully"
-        sim.resolve_event(t, seed, "village_bully", "fight")
+        sim.resolve_event(t, seed, "village_bully", "talk")
         wins += any("Second Wind" in h["text"] for h in t.history)
     assert wins > 0
 

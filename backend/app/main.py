@@ -6,10 +6,12 @@ from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, delete, select
 
+from . import battle_store
 from . import engine as sim
+from .combat import get_combat_config
 from .content import STATS, get_content
 from .db import get_session, init_db
-from .models import Campaign, CharacterRecord, StoryChoiceLog, StoryEventInstance, StoryFlag
+from .models import Campaign, CharacterRecord, CombatRecord, StoryChoiceLog, StoryEventInstance, StoryFlag
 from .rules import (
     alignment_label, describe_trait_effects, effective_stat, max_health, pretty, species_of,
     stage_name, stage_of,
@@ -27,6 +29,7 @@ from .schemas import (
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     get_content()          # fail fast if any content file is invalid
+    get_combat_config()
     get_story_library()
     init_db()
     yield
@@ -70,7 +73,7 @@ def _trait_read(ct, trait_id: str) -> TraitRead:
                      effects=describe_trait_effects(t, ct))
 
 
-def _character_read(rec: CharacterRecord) -> CharacterRead:
+def _character_read(rec: CharacterRecord, session: Session | None = None) -> CharacterRead:
     ct = get_content()
     c = sim.repair(rec.to_character())
     sp = species_of(c, ct)
@@ -113,6 +116,7 @@ def _character_read(rec: CharacterRecord) -> CharacterRead:
         talent=talent,
         cause_of_death=c.cause_of_death,
         pending_event=pending,
+        battle_summary=battle_store.pending_battle(session, rec) if session is not None else None,
         summary=None if c.alive else sim.summarize(c),
     )
 
@@ -122,35 +126,42 @@ def _campaign_read(session: Session, campaign: Campaign) -> CampaignRead:
     return CampaignRead(
         id=campaign.id, name=campaign.name, seed=campaign.seed, active=campaign.active,
         created_at=campaign.created_at,
-        character=_character_read(rec) if rec else None,
+        character=_character_read(rec, session) if rec else None,
     )
 
 
-def _mutate(session: Session, change: Callable[[sim.Character, int], None], *,
+def _mutate(session: Session, change: Callable[[sim.Character, int], object], *,
             story_scans: Callable[[], list[tuple[str, dict]]] | None = None,
-            blocked_by_story: bool = False) -> CharacterRead:
+            blocked_by_story: bool = False,
+            record_battle: Callable[[CharacterRecord, object], None] | None = None) -> CharacterRead:
     """Load the active character, apply a rule from the engine, save, return it.
 
     blocked_by_story: refuse while a story event waits for a decision (as for a legacy pending event).
     story_scans: story trigger scans to run after the change, in the same transaction as the save.
+    record_battle: called with the saved record and whatever `change` returned; it stores a battle summary in the
+    same transaction as the consequences, so a fight and its record are saved together or not at all.
+    Any open (undismissed) summary is closed first: acting again means the player has moved past it.
     """
     campaign, rec = _active(session)
     if blocked_by_story and rec.alive and story_service.has_open_events(session, rec):
         raise HTTPException(409, "An event needs your decision first")
     c = sim.repair(rec.to_character())
     try:
-        change(c, campaign.seed)
+        result = change(c, campaign.seed)
     except sim.InvalidChoice as e:
         raise HTTPException(400, str(e))
     except sim.NotAllowed as e:
         raise HTTPException(409, str(e))
     rec.update_from(c)
     session.add(rec)
+    battle_store.acknowledge_all(session, rec)
+    if record_battle and result is not None:
+        record_battle(rec, result)
     if story_scans and c.alive:                      # queue eligible story events; never touches pending_event
         story_service.run_scans(story_service.make_context(session, rec), story_scans())
     session.commit()
     session.refresh(rec)
-    return _character_read(rec)
+    return _character_read(rec, session)
 
 
 # ---------- reference data ----------
@@ -233,7 +244,7 @@ def delete_campaign(campaign_id: int, session: Session = Depends(get_session)):
     campaign = session.get(Campaign, campaign_id)
     if campaign is None:
         raise HTTPException(404, "Campaign not found")
-    for story_table in (StoryChoiceLog, StoryEventInstance, StoryFlag):      # story state belongs to the life
+    for story_table in (CombatRecord, StoryChoiceLog, StoryEventInstance, StoryFlag):      # story state belongs to the life
         session.exec(delete(story_table).where(story_table.campaign_id == campaign_id))
     for rec in session.exec(select(CharacterRecord).where(CharacterRecord.campaign_id == campaign_id)):
         session.delete(rec)
@@ -246,7 +257,7 @@ def delete_campaign(campaign_id: int, session: Session = Depends(get_session)):
 @api.get("/character", response_model=CharacterRead)
 def get_character(session: Session = Depends(get_session)):
     _, rec = _active(session)
-    return _character_read(rec)
+    return _character_read(rec, session)
 
 
 @api.get("/actions", response_model=list[OptionRead])
@@ -273,8 +284,24 @@ def advance_turn(session: Session = Depends(get_session)):
 @api.post("/events/{event_id}/choices/{choice_id}", response_model=CharacterRead)
 def resolve_event(event_id: str, choice_id: str, session: Session = Depends(get_session)):
     # A decision can change the character's state, so story encounters it unlocks appear right away.
+    # A fight (or a flee attempt) returns its battle summary; it is stored with the consequences and shown
+    # until the player dismisses it. Any other choice returns nothing.
     return _mutate(session, lambda c, seed: sim.resolve_event(c, seed, event_id, choice_id),
-                   story_scans=lambda: [("state", {})])
+                   story_scans=lambda: [("state", {})],
+                   record_battle=lambda rec, summary: battle_store.store_battle(
+                       session, rec, summary, choice_id=choice_id))
+
+
+@api.post("/battles/{battle_id}/acknowledge", response_model=CharacterRead)
+def acknowledge_battle(battle_id: int, session: Session = Depends(get_session)):
+    """Dismiss a battle summary (Continue). Idempotent. The encounter queue is untouched: the next pending
+    encounter simply becomes visible."""
+    _, rec = _active(session)
+    if not battle_store.acknowledge_battle(session, rec, battle_id):
+        raise HTTPException(404, "No such battle")
+    session.commit()
+    session.refresh(rec)
+    return _character_read(rec, session)
 
 
 @api.get("/power", response_model=PowerBreakdown)

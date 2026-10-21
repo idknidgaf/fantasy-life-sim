@@ -3,6 +3,81 @@ export interface Option {
   label: string
   available?: boolean
   requirement?: string | null
+  /** 'fight' and 'flee' options come from a combat encounter and carry the resolver's preview. */
+  kind?: 'normal' | 'fight' | 'flee'
+  combat?: CombatPreview | null
+}
+
+// ---- Combat (shapes mirror backend/app/battle.py; the frontend renders them and calculates nothing) ----
+
+export type CombatWarning = 'none' | 'caution' | 'danger'
+
+export interface DefeatEstimate {
+  band: string
+  min_percent: number
+  max_percent: number
+  instant_death: boolean
+  label: string
+}
+
+/** Shown BEFORE the player chooses. Every figure is an estimate from the combat resolver. */
+export interface CombatPreview {
+  opponent_name: string
+  player_power: number
+  opponent_power: number
+  win_probability: number
+  win_percent: number
+  defeat: DefeatEstimate
+  warning: CombatWarning
+  warning_label: string | null
+  flee_available: boolean
+  flee_chance: number | null
+  flee_percent: number | null
+}
+
+export interface BattleLine {
+  kind: 'stat' | 'skill' | 'item' | 'trait' | 'stress' | 'happiness'
+  text: string
+}
+
+export interface BattlePower {
+  player: number
+  opponent: number
+}
+
+export interface FleeResult {
+  chance: number
+  succeeded: boolean
+}
+
+export interface BattleDamage {
+  percent: number
+  health_lost: number
+  health_before: number
+  health_after: number
+  max_health: number
+  instant_death: boolean
+}
+
+/** The authoritative record of one resolved fight, as stored by the backend. */
+export interface BattleSummary {
+  id: number | null
+  source: 'legacy' | 'story'
+  event_id: string
+  event_title: string
+  opponent_name: string
+  action: 'fight' | 'flee'
+  outcome: 'victory' | 'defeat' | 'fled'
+  flee: FleeResult | null
+  result_text: string
+  power: BattlePower
+  estimated_win_probability: number
+  estimated_win_percent: number
+  damage: BattleDamage | null
+  died: boolean
+  cause_of_death: string | null
+  other_consequences: BattleLine[]
+  rewards: BattleLine[]
 }
 
 export interface PendingEvent {
@@ -109,6 +184,7 @@ export interface Character {
   talent: Talent | null
   cause_of_death: string | null
   pending_event: PendingEvent | null
+  battle_summary: BattleSummary | null
   summary: Summary | null
 }
 

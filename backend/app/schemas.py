@@ -1,7 +1,10 @@
 """Shapes of the JSON the API sends and receives."""
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
+
+from .battle import BattleSummary, CombatPreview
 
 
 class CampaignCreate(BaseModel):
@@ -16,6 +19,8 @@ class OptionRead(BaseModel):
     label: str
     available: bool = True
     requirement: str | None = None        # why it is locked, if it is
+    kind: Literal["normal", "fight", "flee"] = "normal"
+    combat: CombatPreview | None = None   # the resolver's pre-battle preview, on Fight and Flee options
 
 
 class PendingEventRead(BaseModel):
@@ -108,6 +113,7 @@ class CharacterRead(BaseModel):
     talent: TalentRead | None             # ONLY once awakened; a dormant talent is never exposed
     cause_of_death: str | None
     pending_event: PendingEventRead | None
+    battle_summary: BattleSummary | None = None   # the latest fight the player has not dismissed yet
     summary: dict | None                  # filled in once the character has died
 
 

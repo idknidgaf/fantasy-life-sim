@@ -1,0 +1,29 @@
+# Combat configuration. See docs/COMBAT.md for the reasoning, the damage table and the flee rules.
+# Every key is optional (this file may be deleted: the values below are the defaults). Typos are errors.
+#
+# power_floor        Power below this counts as this value in every combat calculation. It makes a Power-0
+#                    fighter (a new character) an ordinary participant instead of a divide-by-zero.
+# sensitivity        k in  win = a^k / (a^k + b^k).  1 is "a / (a + b)": 10x the Power is ~91%. Higher = the
+#                    stronger side wins more reliably.
+# win_chance_floor   The weaker side always keeps at least this chance, and the stronger never exceeds
+#                    1 - this. 0.01 means every fight is between 1% and 99%.
+#
+# flee               Chance that fleeing succeeds. Same shape as the win formula, then clamped.
+#   sensitivity      as above, for fleeing
+#   bias             multiplies YOUR Power when fleeing. 1 = fleeing is as likely to work as winning;
+#                    above 1 makes escape easier than victory.
+#   min_chance       Fleeing is never impossible, and never certain:
+#   max_chance       the result is kept between these.
+#
+# The damage bands (1% / 5% / 5-10% / 50% / 90% / 100% + instant death at 10x) and the warning thresholds are
+# fixed rules of the game, not tunables; they live in app/combat.py next to their documentation.
+
+power_floor: 1.0
+sensitivity: 1.0
+win_chance_floor: 0.01
+
+flee:
+  sensitivity: 1.0
+  bias: 1.0
+  min_chance: 0.05
+  max_chance: 0.95

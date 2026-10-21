@@ -145,6 +145,33 @@ class StoryFlag(SQLModel, table=True):
     updated_year: int = 0
 
 
+# ---------------------------------------------------------------- combat
+
+class CombatRecord(SQLModel, table=True):
+    """One resolved fight, written in the same transaction as its consequences. It is both the audit trail
+    (what was rolled, whether a flee was attempted and how it went) and the saved battle summary: the summary
+    stays here until the player dismisses it, so a reload shows it again instead of losing it, and nothing
+    is ever recalculated."""
+    __table_args__ = (
+        # A story instance resolves once, so it can have only one record: a backstop against duplicates.
+        UniqueConstraint("instance_id", name="uq_combat_instance"),
+    )
+    id: int | None = Field(default=None, primary_key=True)
+    campaign_id: int = Field(foreign_key="campaign.id", index=True)
+    character_id: int = Field(foreign_key="characterrecord.id", index=True)
+    source: str = "legacy"                       # legacy | story
+    event_id: str
+    instance_id: int | None = Field(default=None, foreign_key="storyeventinstance.id")
+    choice_id: str
+    age: int = 0
+    outcome: str                                 # victory | defeat | fled
+    flee_attempted: bool = False
+    flee_succeeded: bool | None = None
+    summary: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    acknowledged: bool = Field(default=False, index=True)
+    created_at: datetime = Field(default_factory=_now)
+
+
 @event.listens_for(StoryChoiceLog, "before_update")
 @event.listens_for(StoryChoiceLog, "before_delete")
 def _choice_log_is_append_only(mapper, connection, target):
