@@ -176,3 +176,25 @@ class CombatRecord(SQLModel, table=True):
 @event.listens_for(StoryChoiceLog, "before_delete")
 def _choice_log_is_append_only(mapper, connection, target):
     raise RuntimeError("StoryChoiceLog is append-only")
+
+
+# ---------------------------------------------------------------- NPCs
+
+class NpcRecord(SQLModel, table=True):
+    """A saved NPC (persistent or named; generic NPCs are temporary and are never saved, see npc_store.py).
+
+    The whole `Npc` lives in `data` as JSON, so the optional attribute sections need no columns of their own and
+    the playable-character table is untouched. The other columns only exist so NPCs can be found by category,
+    status, species or name without opening every blob. `npc_id` is the stable identity; the name is not.
+    A new table, so existing saves need no migration: create_all adds it.
+    """
+    __table_args__ = (UniqueConstraint("campaign_id", "npc_id", name="uq_npc_campaign_id"),)
+    id: int | None = Field(default=None, primary_key=True)
+    campaign_id: int = Field(foreign_key="campaign.id", index=True)
+    npc_id: str = Field(index=True)
+    category: str = Field(index=True)
+    status: str = Field(index=True)
+    species_id: str
+    name: str
+    age: int = 0
+    data: dict = Field(default_factory=dict, sa_column=Column(JSON))
