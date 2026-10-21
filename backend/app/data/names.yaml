@@ -1,0 +1,108 @@
+# Fantasy name rules. Read by app/names.py; validated by `python -m app.validate_content`.
+#
+# A NAME is built from a culture's parts:
+#
+#   given name = prefix + 0..N middle syllables + suffix          e.g.  Ael + an + wen  ->  Aelanwen
+#   surname    = prefix + suffix (optional, with a chance)         e.g.  Silver + song    ->  Silversong
+#
+# Every list is plain data: add a syllable, add a culture, change a chance. No code changes.
+#
+#   prefixes    how a name opens (required)
+#   syllables   optional middle parts
+#   suffixes    how a name ends (required)
+#   middle      [min, max] number of middle syllables (needs `syllables`)
+#   length      [min, max] letters; a name outside this range is rejected and drawn again
+#   surname     the same parts for a family name, plus `chance` (0..1) that a name has one
+#
+# Joins are tidied automatically: three identical letters in a row collapse to two, and names with a long run of
+# consonants or three vowels in a row are rejected. Display names may repeat; uniqueness is only enforced when the
+# caller asks for it (see NameGenerator.generate(taken=...)).
+#
+# species_cultures maps a species id to the culture it names itself from. A species that is not listed uses
+# default_culture, so a species added later still gets names.
+
+default_culture: human
+
+species_cultures:
+  human: human
+  elf: elven
+  dwarf: dwarven
+  wolf: wolf
+  slime: slime
+  dragonkin: draconic
+
+cultures:
+  human:
+    given:
+      prefixes: [Al, Ber, Cal, Dar, Ed, Fen, Gar, Hal, Jor, Kel, Lu, Mar, Os, Per, Ro, Tam, Wil, Ana, Bri, Cor, Del, Isa, Ley, Mir, Nor]
+      syllables: [an, el, or, in, ar, en]
+      suffixes: [an, ric, ward, ton, wyn, den, lin, ard, ia, ela, ine, ora, ys, mund, bert, la, na]
+      middle: [0, 1]
+      length: [4, 11]
+    surname:
+      chance: 0.85
+      prefixes: [Ash, Black, Brook, Oak, Thorn, Hollow, Stone, Green, Red, Fair, Wester, North, Gold, Wynd]
+      suffixes: [ford, wood, field, ton, wright, ley, hill, vale, croft, stead, well, brook]
+      length: [5, 13]
+
+  elven:
+    given:
+      prefixes: [Ael, Cae, Eli, Fae, Gal, Ila, Lor, Mir, Nae, Sil, Tha, Vael, Ara, Eryn, Syl, Ith]
+      syllables: [an, el, il, ra, ri, la, li, na, thi, sa]
+      suffixes: [wen, dor, riel, thil, vyn, iel, ar, ion, ael, ithra, anwe, orel]
+      middle: [0, 1]
+      length: [5, 12]
+    surname:
+      chance: 0.7
+      prefixes: [Silver, Moon, Star, Dawn, Whisper, Leaf, Gale, Dusk, Sun, Mist, Dew]
+      suffixes: [leaf, song, whisper, wind, shade, brook, bloom, light, dancer, weaver]
+      length: [6, 14]
+
+  dwarven:
+    given:
+      prefixes: [Bor, Dur, Thor, Bal, Dwal, Kaz, Mor, Nor, Brom, Bar, Gor, Harn, Rud, Vor, Dag]
+      syllables: [ur, ak, ig, om, ar, ok]
+      suffixes: [gar, din, rik, dak, nar, grim, mund, bek, rum, dur, kar, bur]
+      middle: [0, 1]
+      length: [4, 11]
+    surname:
+      chance: 0.9
+      prefixes: [Iron, Stone, Deep, Anvil, Granite, Ember, Coal, Hammer, Rune, Gold, Steel]
+      suffixes: [forge, beard, hand, fist, helm, delver, breaker, hold, born, shield]
+      length: [6, 14]
+
+  draconic:
+    given:
+      prefixes: [Vor, Zar, Kha, Dra, Ysh, Thar, Ignar, Sar, Vyr, Kael, Ryn, Mor, Ash]
+      syllables: [ax, or, ath, ur, ix]
+      suffixes: [ion, athor, yrr, oth, zhar, karn, vex, rax, ulth, ixis]
+      middle: [0, 1]
+      length: [5, 12]
+    surname:
+      chance: 0.5
+      prefixes: [Ember, Ash, Flame, Scale, Storm, Cinder, Obsidian, Ruin, Sky]
+      suffixes: [wing, claw, born, bane, fang, heart, scale, breath, flight]
+      length: [6, 14]
+
+  # Beasts take a single descriptive name. Their `surname.chance` is 0, so they never get a family name.
+  wolf:
+    given:
+      prefixes: [Ash, Grey, Fang, Storm, Shadow, Swift, Moon, Frost, Thorn, Dusk, Bramble, Night, Rough]
+      suffixes: [paw, tail, fang, howl, claw, pelt, runner, eye, coat]
+      length: [5, 12]
+    surname:
+      chance: 0
+      prefixes: [Pack]
+      suffixes: [mate]
+
+  slime:
+    given:
+      prefixes: [Blo, Glo, Plo, Slu, Squ, Gur, Bu, Moo, Glu, Ooz, Splo]
+      syllables: [o, u, ib]
+      suffixes: [rp, p, bble, ggle, rble, sh, zz, ob, ub, ish]
+      middle: [0, 1]
+      length: [3, 10]
+    surname:
+      chance: 0
+      prefixes: [Gloop]
+      suffixes: [ling]
