@@ -215,19 +215,19 @@
   choices:
     - id: fight
       text: Fight back
-      check: {stat: strength, difficulty: 35}
-      success:
-        result: It is a messy scuffle, but you come out on top.
-        effects:
-          - skill_xp: {martial_arts: 1.5}
-          - stat_delta: {strength: 1}
-          - axis_delta: {bravery: 4}
-      failure:
-        result: You lose, but you do not stay down easily.
-        effects:
-          - skill_xp: {martial_arts: 0.5}
-          - stat_delta: {constitution: -1}
-          - axis_delta: {bravery: 2}
+      combat:
+        opponent: {name: The village bully, skills: {martial_arts: 1}, cause: a beating behind the granary}
+        victory:
+          result: It is a messy scuffle, but you come out on top.
+          effects:
+            - skill_xp: {martial_arts: 1.5}
+            - stat_delta: {strength: 1}
+            - axis_delta: {bravery: 4}
+        defeat:
+          result: You lose, but you do not stay down easily.
+          effects:
+            - skill_xp: {martial_arts: 0.5}
+            - axis_delta: {bravery: 2}
     - id: talk
       text: Talk them down
       check: {stat: charisma, difficulty: 35}

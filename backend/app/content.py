@@ -180,6 +180,34 @@ class OutcomeDef(Strict):
     effects: list[dict] = []
 
 
+class OpponentDef(Strict):
+    """Who the player fights. The opponent has no stats of its own: it is described by the skills and traits it
+    would have, and its Power comes from the SAME Power calculation as the player's (see battle.opponent_power)."""
+    name: str = Field(min_length=1)
+    skills: dict[str, float] = {}          # skill_id -> level; their Power contribution is set by power.yaml
+    traits: list[str] = []                 # traits with a Power modifier count, like the player's
+    cause: str | None = None               # cause of death if the player dies fighting it
+
+
+class FleeDef(Strict):
+    """How an encounter treats fleeing. Every fight can be fled from unless `allowed` is false."""
+    allowed: bool = True
+    modifier: float = Field(default=0.0, ge=-1, le=1)      # added to the flee probability (encounter context)
+    text: str = Field(default="Flee", min_length=1)         # the button label
+    success_text: str = "You slip away before it comes to blood."
+    failure_text: str = "You try to get away, but you are caught and have to fight."
+
+
+class CombatDef(Strict):
+    """A choice resolved by the combat system instead of a dice check. `victory` and `defeat` hold the rewards
+    and non-damage consequences; the damage itself (and death) always comes from the combat rules, never from
+    these effects, so a defeat is never punished twice. Fleeing successfully applies neither."""
+    opponent: OpponentDef
+    victory: OutcomeDef
+    defeat: OutcomeDef
+    flee: FleeDef = Field(default_factory=FleeDef)
+
+
 class ChoiceDef(Strict):
     id: str
     text: str
@@ -189,6 +217,7 @@ class ChoiceDef(Strict):
     check: CheckDef | None = None
     success: OutcomeDef | None = None
     failure: OutcomeDef | None = None
+    combat: CombatDef | None = None
 
 
 class EventDef(Strict):
@@ -420,6 +449,28 @@ def _check_effects(effs: list, where: str, ct: Content, refs: _Refs, errs: list[
         _check_effect(e, f"{where}[{i}]", ct, refs, errs)
 
 
+def _check_combat(ch: ChoiceDef, where: str, ct: Content, refs: _Refs, errs: list[str]) -> None:
+    """A combat choice is resolved by the combat system: it may not also carry a check or a plain result."""
+    if ch.check or ch.success is not None or ch.failure is not None or ch.result is not None or ch.effects:
+        errs.append(f"{where}: a combat choice uses combat.victory/defeat, not check, success/failure or result/effects")
+    combat = ch.combat
+    for skill in combat.opponent.skills:
+        if skill not in ct.skills:
+            errs.append(f"{where}: combat opponent has unknown skill '{skill}'")
+    if any(level < 0 for level in combat.opponent.skills.values()):
+        errs.append(f"{where}: combat opponent skill levels cannot be negative")
+    for trait in combat.opponent.traits:
+        if trait not in ct.traits:
+            errs.append(f"{where}: combat opponent has unknown trait '{trait}'")
+    _check_effects(combat.victory.effects, f"{where} combat.victory.effects", ct, refs, errs)
+    _check_effects(combat.defeat.effects, f"{where} combat.defeat.effects", ct, refs, errs)
+    for name, outcome in (("victory", combat.victory), ("defeat", combat.defeat)):
+        for e in outcome.effects:
+            if isinstance(e, dict) and ("die" in e or (_num(e.get("health_delta")) and e["health_delta"] < 0)):
+                errs.append(f"{where}: combat.{name}.effects may not deal damage or kill: "
+                            "defeat damage and death come from the combat rules, so nothing is applied twice")
+
+
 # ---------------------------------------------------------------- cross-validation
 
 def _stage_first_age(sp: SpeciesDef, stage: StageDef) -> int:
@@ -588,7 +639,11 @@ def _cross_validate(ct: Content) -> tuple[list[str], list[str]]:
                 errs.append(f"{cw}: duplicate choice id")
             seen.add(ch.id)
             _check_reqs(ch.requirements, f"{cw} requirements", ct, refs, errs)
-            if ch.check:
+            if ":" in ch.id:
+                errs.append(f"{cw}: a choice id may not contain ':' (it is reserved for the generated Flee option)")
+            if ch.combat:
+                _check_combat(ch, cw, ct, refs, errs)
+            elif ch.check:
                 if (ch.check.stat is None) == (ch.check.skill is None):
                     errs.append(f"{cw}: check needs exactly one of 'stat' or 'skill'")
                 if ch.check.stat is not None and ch.check.stat not in STATS:

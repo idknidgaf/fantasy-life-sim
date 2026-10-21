@@ -13,8 +13,9 @@ from __future__ import annotations
 
 import random
 
+from . import battle
 from .character import Character
-from .content import STATS, Content, get_content
+from .content import STATS, ChoiceDef, Content, EventDef, get_content
 from .rules import (
     BASE_AGE_UP_HEAL, alignment_label, apply_effects, change_happiness, change_health,
     clamp_stat, clamp_vital, conditions_met, effective_stat, gain_skill, gain_stress,
@@ -89,6 +90,23 @@ def _check_vitals(c: Character, ct: Content) -> None:
 def _log_death_if_needed(c: Character) -> None:
     if not c.alive and not any(h["kind"] == "death" and h["age"] == c.age for h in c.history):
         _log(c, "death", f"Died at age {c.age} of {c.cause_of_death}.")
+
+
+DEFAULT_BATTLE_CAUSE = "wounds taken in battle"
+
+
+def apply_battle_damage(c: Character, ct: Content, hp: int, *, lethal: bool, cause: str) -> int:
+    """Combat's one door into health and death. Health drops through the normal vitals; reaching 0, or an instant
+    death (a 10x Power gap), kills exactly as the `die` effect and `_check_vitals` do: `alive` goes False and the
+    cause is set. The caller logs the death (`log_death_if_needed`), so it is never logged twice. Returns the
+    health actually lost."""
+    before = c.health if c.health is not None else max_health(c, ct)
+    change_health(c, ct, -hp)
+    if lethal or c.health <= 0:
+        c.health = 0
+        c.alive = False
+        c.cause_of_death = cause
+    return before - c.health
 
 
 # ---------------------------------------------------------------- birth
@@ -378,15 +396,28 @@ def advance_turn(c: Character, seed: int) -> None:
 # ---------------------------------------------------------------- events
 
 def event_choice_state(c: Character, ct: Content, event_id: str) -> list[dict]:
-    """The choices for an event, each flagged available/locked with a reason."""
+    """The choices for an event, each flagged available/locked with a reason. A combat choice is offered as a
+    Fight (kind "fight") followed by a generated Flee (kind "flee", id "<choice>:flee"), both carrying the
+    resolver's pre-battle preview, unless the encounter forbids fleeing."""
     out = []
     for ch in ct.events[event_id].choices:
         reason = unmet_requirements_text(ch.requirements, c, ct)
-        out.append({"id": ch.id, "label": ch.text, "available": reason is None, "requirement": reason})
+        entry = {"id": ch.id, "label": ch.text, "available": reason is None, "requirement": reason,
+                 "kind": "normal", "combat": None}
+        if ch.combat is None:
+            out.append(entry)
+            continue
+        shown = battle.preview(battle.matchup(c, ct, ch.combat)).model_dump()
+        out.append({**entry, "kind": "fight", "combat": shown})
+        if ch.combat.flee.allowed:
+            out.append({**entry, "id": ch.id + battle.FLEE_SUFFIX, "label": ch.combat.flee.text,
+                        "kind": "flee", "combat": shown})
     return out
 
 
-def resolve_event(c: Character, seed: int, event_id: str, choice_id: str) -> None:
+def resolve_event(c: Character, seed: int, event_id: str, choice_id: str) -> battle.BattleSummary | None:
+    """Resolve the pending event with a choice. A combat choice (or its generated Flee) is resolved by the combat
+    system and returns its battle summary; every other choice returns None."""
     ct = get_content()
     if not c.alive:
         raise NotAllowed("This character has died")
@@ -396,12 +427,15 @@ def resolve_event(c: Character, seed: int, event_id: str, choice_id: str) -> Non
         raise NotAllowed("That is not the current event")
 
     event = ct.events[event_id]
-    choice = next((ch for ch in event.choices if ch.id == choice_id), None)
-    if choice is None:
+    flee = choice_id.endswith(battle.FLEE_SUFFIX)
+    choice = next((ch for ch in event.choices if ch.id == (choice_id[:-len(battle.FLEE_SUFFIX)] if flee else choice_id)), None)
+    if choice is None or (flee and not (choice.combat and choice.combat.flee.allowed)):
         raise InvalidChoice(f"Unknown choice: {choice_id}")
     locked = unmet_requirements_text(choice.requirements, c, ct)
     if locked:
         raise NotAllowed(locked)
+    if choice.combat:
+        return _resolve_combat(c, ct, seed, event, choice, flee=flee)
 
     rng = year_rng(seed, c.age, f"event:{event_id}")
     notes: list[str] = []
@@ -428,10 +462,47 @@ def resolve_event(c: Character, seed: int, event_id: str, choice_id: str) -> Non
 
     if not c.alive:
         _log_death_if_needed(c)
-        return
+        return None
     check_awakening(c, seed, ct)
     if c.pending_event is None and c.queued_events:
         c.pending_event = c.queued_events.pop(0)
+    return None
+
+
+def _resolve_combat(c: Character, ct: Content, seed: int, event: EventDef, choice: ChoiceDef,
+                    *, flee: bool) -> battle.BattleSummary:
+    """Fight or flee. Both Powers come from the Power system, the dice are seeded like every other roll, and the
+    consequences are applied once, here: damage and death through `apply_battle_damage`, rewards and other
+    effects through the normal effect engine. A successful flee applies nothing."""
+    combat_def = choice.combat
+    m = battle.matchup(c, ct, combat_def)
+    roll = battle.roll_battle(m, flee=flee, rngs=battle.rngs_for(f"{seed}:{c.age}:combat:{event.id}"))
+    before = battle.snapshot(c, ct)
+
+    c.pending_event = None
+    outcome = {"victory": combat_def.victory, "defeat": combat_def.defeat}.get(roll.outcome)
+    health_lost = 0
+    if roll.outcome == "defeat":
+        health_lost = apply_battle_damage(c, ct, battle.damage_for(max_health(c, ct), roll),
+                                          lethal=roll.instant_death, cause=m.opponent.cause or DEFAULT_BATTLE_CAUSE)
+    notes: list[str] = []
+    if outcome and c.alive:                                     # the dead collect no rewards
+        apply_effects(outcome.effects, c, ct, year_rng(seed, c.age, f"event:{event.id}"), notes)
+    _check_vitals(c, ct)
+
+    text = battle.result_text(roll, combat_def.flee, outcome.result if outcome else None)
+    if health_lost:
+        notes.append(f"{-health_lost:+d} health")
+    _log(c, "event", f"{event.title}: {text}" + (f" ({', '.join(notes)})" if notes else ""), event_id=event.id)
+    summary = battle.build_summary(source="legacy", event_id=event.id, event_title=event.title, m=m, roll=roll,
+                                   text=text, before=before, after=c, health_lost=health_lost, ct=ct)
+    if not c.alive:
+        _log_death_if_needed(c)
+        return summary
+    check_awakening(c, seed, ct)
+    if c.pending_event is None and c.queued_events:
+        c.pending_event = c.queued_events.pop(0)
+    return summary
 
 
 # ---------------------------------------------------------------- housekeeping & summary

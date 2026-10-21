@@ -138,20 +138,18 @@
   choices:
     - id: fight
       text: Stand and fight
-      check: {stat: strength, difficulty: 50}
-      success:
-        result: Teeth and fury, and somehow you drive them off.
-        effects:
-          - stat_delta: {strength: 1}
-          - skill_xp: {martial_arts: 1.5}
-          - axis_delta: {bravery: 3}
-      failure:
-        result: You are badly mauled before the pack loses interest.
-        effects:
-          - stat_delta: {constitution: -2}
-          - counter: {overwhelming_foe: 1}
-          - die: {cause: wolves}
-            chance: 0.05
+      combat:
+        opponent: {name: The wolf pack, skills: {martial_arts: 3}, cause: wolves}
+        victory:
+          result: Teeth and fury, and somehow you drive them off.
+          effects:
+            - stat_delta: {strength: 1}
+            - skill_xp: {martial_arts: 1.5}
+            - axis_delta: {bravery: 3}
+        defeat:
+          result: You are badly mauled before the pack loses interest.
+          effects:
+            - counter: {overwhelming_foe: 1}
     - id: climb
       text: Climb the nearest tree
       check: {stat: dexterity, difficulty: 35}
@@ -181,19 +179,19 @@
   choices:
     - id: enter
       text: Enter the contest
-      check: {stat: strength, difficulty: 45}
-      success:
-        result: You fight your way to the final and win it, bruised and glowing.
-        effects:
-          - skill_xp: {swordsmanship: 3}
-          - stat_delta: {charisma: 1}
-          - grant_item: rough_gemstone
-      failure:
-        result: You fight bravely and lose in the second round.
-        effects:
-          - skill_xp: {swordsmanship: 1.5}
-          - stat_delta: {constitution: -1}
-            chance: 0.5
+      combat:
+        opponent: {name: The tournament's champions, skills: {swordsmanship: 4}, cause: a tournament bout}
+        flee: {text: Withdraw before the first bout, success_text: You bow out before the first bout and watch from the stands., failure_text: The heralds will not let you withdraw now.}
+        victory:
+          result: You fight your way to the final and win it, bruised and glowing.
+          effects:
+            - skill_xp: {swordsmanship: 3}
+            - stat_delta: {charisma: 1}
+            - grant_item: rough_gemstone
+        defeat:
+          result: You fight bravely and lose in the second round.
+          effects:
+            - skill_xp: {swordsmanship: 1.5}
     - id: watch
       text: Watch and learn from the fighters
       result: You study every feint and every bit of footwork.
@@ -276,20 +274,18 @@
   choices:
     - id: fight
       text: Draw steel and fight
-      check: {stat: strength, difficulty: 50}
-      success:
-        result: It is brief and ugly. The bandits flee, leaving a little something behind.
-        effects:
-          - skill_xp: {martial_arts: 2}
-          - grant_item: rough_gemstone
-          - axis_delta: {bravery: 4}
-      failure:
-        result: They are better armed than you thought. You barely escape with your life.
-        effects:
-          - stat_delta: {constitution: -2}
-          - counter: {overwhelming_foe: 1}
-          - die: {cause: bandits}
-            chance: 0.05
+      combat:
+        opponent: {name: The bandits, skills: {swordsmanship: 4, martial_arts: 2}, cause: bandits}
+        victory:
+          result: It is brief and ugly. The bandits flee, leaving a little something behind.
+          effects:
+            - skill_xp: {martial_arts: 2}
+            - grant_item: rough_gemstone
+            - axis_delta: {bravery: 4}
+        defeat:
+          result: They are better armed than you thought. You barely escape with your life.
+          effects:
+            - counter: {overwhelming_foe: 1}
     - id: negotiate
       text: Talk your way out of it
       check: {stat: charisma, difficulty: 45}

@@ -93,7 +93,7 @@ def test_unknown_stage(tmp_path):
 
 def test_check_choice_must_not_also_have_a_plain_result(tmp_path):
     def change(d):
-        find(find(d, "village_bully")["choices"], "fight")["result"] = "oops"
+        find(find(d, "village_bully")["choices"], "talk")["result"] = "oops"
     assert "success/failure, not result/effects" in errors_for(tmp_path, "events/childhood.yaml", change)
 
 

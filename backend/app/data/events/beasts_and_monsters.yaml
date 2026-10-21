@@ -13,18 +13,18 @@
   choices:
     - id: challenge
       text: Challenge their leader
-      check: {stat: strength, difficulty: 55}
-      success:
-        result: You bring down their leader, and both packs turn to look at you differently.
-        effects:
-          - grant_trait: pack_alpha
-          - stat_delta: {strength: 1}
-          - axis_delta: {bravery: 6}
-      failure:
-        result: You are driven off, bloodied, but you live to try again.
-        effects:
-          - stat_delta: {constitution: -2}
-          - axis_delta: {bravery: 3}
+      combat:
+        opponent: {name: The rival pack's leader, skills: {martial_arts: 1}, cause: a rival pack's leader}
+        victory:
+          result: You bring down their leader, and both packs turn to look at you differently.
+          effects:
+            - grant_trait: pack_alpha
+            - stat_delta: {strength: 1}
+            - axis_delta: {bravery: 6}
+        defeat:
+          result: You are driven off, bloodied, but you live to try again.
+          effects:
+            - axis_delta: {bravery: 3}
     - id: defend
       text: Stand with your pack elders
       result: You hold the line beside them.

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from './api'
+import BattleSummary from './components/BattleSummary'
 import CharacterSheet from './components/CharacterSheet'
 import DeathSummary from './components/DeathSummary'
 import EventLog from './components/EventLog'
@@ -142,7 +143,10 @@ export default function App() {
   const currentStoryEvent = storyEvents[0]?.status === 'presented' ? storyEvents[0] : null
   // Encounters stop time: Age Up and the tabs are unavailable until they are resolved. A skippable
   // story event is the explicit exception.
-  const eventPending = !!character?.pending_event || storyEvents.some((e) => !e.skippable)
+  const eventPending = !!character?.battle_summary || !!character?.pending_event || storyEvents.some((e) => !e.skippable)
+
+  // Continue dismisses the stored summary. The backend's queue is untouched, so the next pending encounter appears.
+  const continueAfterBattle = (battleId: number) => change(() => api.acknowledgeBattle(battleId))
 
   const resolveStoryEvent = (instanceId: number, choiceId: string) =>
     change(() => api.resolveStoryEvent(instanceId, choiceId))
@@ -192,7 +196,13 @@ export default function App() {
           </aside>
 
           <section className="content-main">
-            {!character.alive && character.summary ? (
+            {character.battle_summary && character.battle_summary.id !== null ? (
+              <BattleSummary
+                summary={character.battle_summary}
+                busy={busy}
+                onContinue={() => continueAfterBattle(character.battle_summary!.id!)}
+              />
+            ) : !character.alive && character.summary ? (
               <DeathSummary summary={character.summary} onNewLife={goToMenu} />
             ) : character.pending_event ? (
               <EventPanel event={character.pending_event} busy={busy} onChoose={resolveEvent} />

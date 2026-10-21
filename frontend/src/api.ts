@@ -50,6 +50,7 @@ export const api = {
   advanceTurn: () => post<Character>('/turn/advance'),
   resolveEvent: (eventId: string, choiceId: string) =>
     post<Character>(`/events/${enc(eventId)}/choices/${enc(choiceId)}`),
+  acknowledgeBattle: (battleId: number) => post<Character>(`/battles/${battleId}/acknowledge`),
   getHistory: () => request<HistoryEntry[]>('/history'),
   getPower: () => request<PowerBreakdown>('/power'),
 
