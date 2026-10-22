@@ -149,6 +149,181 @@
         "type": "object"
       }
     },
+    "npc_exists": {
+      "doc": "The named character has been introduced in this game (alive or not).",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "npc": {
+            "minLength": 1,
+            "title": "Npc",
+            "type": "string"
+          }
+        },
+        "required": [
+          "npc"
+        ],
+        "title": "NpcParams",
+        "type": "object"
+      }
+    },
+    "npc_flag_at_least": {
+      "doc": "The named character exists and their numeric flag is at least value (unset counts as 0).",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "flag": {
+            "minLength": 1,
+            "title": "Flag",
+            "type": "string"
+          },
+          "npc": {
+            "minLength": 1,
+            "title": "Npc",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "npc",
+          "flag",
+          "value"
+        ],
+        "title": "NpcFlagAtLeastParams",
+        "type": "object"
+      }
+    },
+    "npc_flag_equals": {
+      "doc": "The named character's flag is set and equals value (type-aware: true is not 1).",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "flag": {
+            "minLength": 1,
+            "title": "Flag",
+            "type": "string"
+          },
+          "npc": {
+            "minLength": 1,
+            "title": "Npc",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "npc",
+          "flag",
+          "value"
+        ],
+        "title": "NpcFlagEqualsParams",
+        "type": "object"
+      }
+    },
+    "npc_related": {
+      "doc": "The named character exists and is linked to `other` (a definition id, or `player`) by `kind`.",
+      "params": {
+        "$defs": {
+          "RelationshipKind": {
+            "enum": [
+              "parent",
+              "mentor",
+              "partner",
+              "friend",
+              "rival"
+            ],
+            "title": "RelationshipKind",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "$ref": "#/$defs/RelationshipKind"
+          },
+          "npc": {
+            "minLength": 1,
+            "title": "Npc",
+            "type": "string"
+          },
+          "other": {
+            "minLength": 1,
+            "title": "Other",
+            "type": "string"
+          },
+          "role": {
+            "default": "either",
+            "enum": [
+              "source",
+              "target",
+              "either"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "npc",
+          "kind",
+          "other"
+        ],
+        "title": "NpcRelatedParams",
+        "type": "object"
+      }
+    },
+    "npc_status": {
+      "doc": "The named character exists and has this lifecycle status.",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "npc": {
+            "minLength": 1,
+            "title": "Npc",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "deceased",
+              "retired"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "npc",
+          "status"
+        ],
+        "title": "NpcStatusParams",
+        "type": "object"
+      }
+    },
     "trait_absent": {
       "doc": "The character does not have the trait.",
       "params": {
@@ -254,6 +429,93 @@
         "type": "object"
       }
     },
+    "increment_npc_flag": {
+      "doc": "Add to a numeric flag on a named character (unset starts at 0; a non-numeric flag is an error).",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "default": 1,
+            "title": "Amount"
+          },
+          "flag": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Flag",
+            "type": "string"
+          },
+          "npc": {
+            "minLength": 1,
+            "title": "Npc",
+            "type": "string"
+          }
+        },
+        "required": [
+          "npc",
+          "flag"
+        ],
+        "title": "IncrementNpcFlagParams",
+        "type": "object"
+      }
+    },
+    "link_npc": {
+      "doc": "Link a named character to `other` (a definition id, or `player`). Repeating it is harmless.",
+      "params": {
+        "$defs": {
+          "RelationshipKind": {
+            "enum": [
+              "parent",
+              "mentor",
+              "partner",
+              "friend",
+              "rival"
+            ],
+            "title": "RelationshipKind",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "$ref": "#/$defs/RelationshipKind"
+          },
+          "npc": {
+            "minLength": 1,
+            "title": "Npc",
+            "type": "string"
+          },
+          "other": {
+            "minLength": 1,
+            "title": "Other",
+            "type": "string"
+          },
+          "role": {
+            "default": "source",
+            "enum": [
+              "source",
+              "target"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "npc",
+          "kind",
+          "other"
+        ],
+        "title": "LinkNpcParams",
+        "type": "object"
+      }
+    },
     "set_flag": {
       "doc": "Set a story flag to a bool, number or string.",
       "params": {
@@ -288,6 +550,107 @@
           "value"
         ],
         "title": "SetFlagParams",
+        "type": "object"
+      }
+    },
+    "set_npc_flag": {
+      "doc": "Set a story flag on a named character.",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "flag": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Flag",
+            "type": "string"
+          },
+          "npc": {
+            "minLength": 1,
+            "title": "Npc",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "npc",
+          "flag",
+          "value"
+        ],
+        "title": "SetNpcFlagParams",
+        "type": "object"
+      }
+    },
+    "set_npc_status": {
+      "doc": "Change a named character's lifecycle status. An immortal one cannot be killed; the dead stay dead.",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "cause": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cause"
+          },
+          "npc": {
+            "minLength": 1,
+            "title": "Npc",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "deceased",
+              "retired"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "npc",
+          "status"
+        ],
+        "title": "SetNpcStatusParams",
+        "type": "object"
+      }
+    },
+    "spawn_npc": {
+      "doc": "Introduce a named character. A character who already exists is not created again. A new one is created only\n    if the definition's `encounter.conditions` (if any) hold, so authors decide when each character may appear.",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "npc": {
+            "minLength": 1,
+            "title": "Npc",
+            "type": "string"
+          }
+        },
+        "required": [
+          "npc"
+        ],
+        "title": "NpcParams",
         "type": "object"
       }
     },
@@ -443,6 +806,19 @@
             "minLength": 1,
             "title": "Narrative",
             "type": "string"
+          },
+          "npc": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z0-9][a-z0-9_.\\-]{0,63}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Npc"
           },
           "title": {
             "minLength": 1,

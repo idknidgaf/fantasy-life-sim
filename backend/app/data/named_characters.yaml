@@ -1,20 +1,57 @@
 # Authored lore characters ("named" NPCs). Read by app/npc.py; validated by `python -m app.validate_content`.
+# The full reference is docs/NAMED_NPCS.md. This file is the DEFINITIONS only: version controlled, never written at
+# runtime. A character's mutable state (age, status, location, flags, links) lives in the save, not here.
 #
-# A named character has an AUTHORED name and id. Nothing about them is randomly generated, and they never take
-# part in name generation. Every attribute but the identity is optional: leave out what the story does not need.
+# Nothing is created from a definition by itself. A story rule introduces a character (the `spawn_npc` effect), and
+# only once: asking again returns the character who already exists.
 #
 # characters:
-#   - id: archmage_valen          lowercase letters, digits, underscores. Becomes the stable id "named_archmage_valen".
-#     name: Valen of the Seventh Tower    the display name, exactly as written
-#     species: elf                         must exist in species.yaml
-#     age: 212
-#     description: Keeper of the Seventh Tower.
-#     stats: {strength: 30, dexterity: 45, constitution: 40, wisdom: 90, charisma: 60}     # all five, or omit
-#     specialised_stats: {magic: 85}       swordsmanship | marksmanship | magic | martial_arts -> level
-#     traits: [keen_mind]                  must exist in traits.yaml
-#     talent: ...                          optional hidden talent id
-#     status: active                       active | deceased | retired
+#   - id: sword_saint_kael            stable definition id: lowercase letters, digits, underscores. The character's
+#                                     runtime id is "named_sword_saint_kael". Never rename or reuse it.
+#     version: 1                      bump when you change the definition. Living characters are NOT reset by it:
+#                                     only the display name, and flags and links the new version adds, are updated.
+#     name: Kael Auren                the display name, exactly as written (never name-generated)
+#     title: The Sword Saint          optional
+#     species: human                  must exist in species.yaml
+#     age: 74                         the STARTING age (the current age is runtime state)
+#     description: ...                optional, short, shown to the player
+#     lore: ...                       optional, long form
+#     affiliations: [silver_order]    optional plain tags (no faction simulation)
+#     location: northern_keep         optional starting location (runtime state afterwards)
 #
-# There are no named characters yet. Story integration is a later task.
+#     # Authored attributes are FIXED: used exactly as written, never rolled.
+#     stats: {strength: 70, dexterity: 80, constitution: 60, wisdom: 55, charisma: 40}   # all five (or some, with generate.stats)
+#     specialised_stats: {swordsmanship: 95}     swordsmanship | marksmanship | magic | martial_arts -> level
+#     traits: [keen_sense]            must exist in traits.yaml (given regardless of prerequisites)
+#     talent: ...                     optional hidden talent id
+#
+#     # What the game MAY generate instead (default: nothing). Generated once, when the character is first created,
+#     # from the campaign seed and this id, then saved with the character.
+#     generate:
+#       stats: false                  fill in base stats not listed above
+#       stat_range: [20, 60]
+#       combat: false                 draw specialised stats (only if specialised_stats is left out)
+#       combat_focus: 1               how many to draw
+#       combat_level: [5, 25]
+#       random_traits: 0              extra traits on top of the authored ones
+#       talent_chance: 0.0            a hidden talent, only if none is authored
+#
+#     lifecycle:                      who ages and who can die
+#       ageing: normal                normal (default) | longevity | immortal
+#       lifespan_multiplier: 1.0      longevity only: dies of old age past species lifespan x this
+#     status: active                  active | deceased | retired (the status they start with)
+#
+#     relationships:                  initial links to OTHER named characters, made when both have been introduced
+#       - {kind: mentor, other: young_apprentice}          kind: parent, mentor, friend, rival, partner, ...
+#         # self_is: source | target (default source): for parent and mentor, the source is the parent/mentor
+#     flags: {met_player: false}      initial NPC-scoped story flags (numbers, booleans or strings)
+#     encounter:                      when a story may introduce them: a story-engine condition tree
+#       conditions: {type: age_at_least, value: 12}
+#
+# Stories refer to a character by this id: events have an optional `npc: <id>`, and the story engine has the
+# conditions npc_exists, npc_status, npc_related, npc_flag_equals, npc_flag_at_least and the effects spawn_npc,
+# set_npc_flag, increment_npc_flag, set_npc_status, link_npc. See docs/STORY_ENGINE.md.
+#
+# There are no named characters yet.
 
 characters: []

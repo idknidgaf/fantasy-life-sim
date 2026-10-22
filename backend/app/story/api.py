@@ -20,6 +20,14 @@ class StoryChoiceRead(BaseModel):
     locked_hint: str | None = None
 
 
+class StoryNpcRead(BaseModel):
+    id: str                              # the definition id
+    name: str
+    title: str | None = None
+    description: str = ""
+    status: str | None = None            # active | deceased | retired; None until they are introduced
+
+
 class StoryEventRead(BaseModel):
     instance_id: int
     event_id: str
@@ -33,6 +41,7 @@ class StoryEventRead(BaseModel):
     expires_year: int | None
     selected_choice_id: str | None
     choices: list[StoryChoiceRead]
+    npc: StoryNpcRead | None = None
 
 
 class StoryResolutionRead(BaseModel):

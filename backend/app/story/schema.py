@@ -10,6 +10,7 @@ from typing import Annotated, Literal
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
 
+from . import npc_hooks  # noqa: F401  (registers the named-character condition and effect types)
 from .conditions import parse_condition
 from .effects import parse_effect
 from .triggers import parse_trigger
@@ -77,6 +78,7 @@ class EventDefinition(Strict):
     narrative: str = Field(min_length=1)
     trigger: Trigger = Field(default_factory=lambda: {"type": "manual"})
     conditions: Condition | None = None                 # eligibility
+    npc: Id | None = None                               # the named character this encounter is with (definition id)
     lifecycle: Lifecycle = Field(default_factory=Lifecycle)
     choices: list[Choice] = Field(min_length=1)
     # Older versions whose in-flight instances this version can still resolve (choice ids unchanged).

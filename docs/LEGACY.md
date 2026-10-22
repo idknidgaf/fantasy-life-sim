@@ -20,8 +20,9 @@ An heir is a **living descendant of the dead character**, found through the exis
 (`relationships.eligible_descendants`):
 
 * a child, grandchild and so on, **nearest generation first** (each is labelled `child` or `descendant`);
-* a kept NPC (persistent or named) whose status is **`active`**: alive and not retired;
-* never: the dead character, a **dead** or **retired** descendant, a **temporary** (generic) NPC, anyone who is not
+* a kept **persistent** NPC whose status is **`active`**: alive and not retired;
+* never: the dead character, a **dead** or **retired** descendant, a **temporary** (generic) NPC, an authored **named**
+  character (see `NAMED_NPCS.md`), anyone who is not
   descended from them (a partner's other children, other families), or an earlier playable life.
 
 Only the dead character's own line is offered, never "every NPC in the world". One heir: no list to choose from, just a
@@ -86,4 +87,4 @@ Existing saves keep working (no role row means "newest record"). Deleting a camp
 * NPCs do not age, so a heir plays from the age they were saved at.
 * An heir's attributes are those of an NPC (newborn aptitude plus a small specialised head start); the player's developed
   stats are not inherited (existing inheritance rule).
-* No family-tree view, no named lore NPCs, no extra inheritance rules.
+* No family-tree view and no extra inheritance rules.

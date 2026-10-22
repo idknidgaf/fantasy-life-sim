@@ -20,6 +20,7 @@ from datetime import datetime, timezone
 from sqlalchemy import update
 from sqlmodel import Session
 
+from .. import named
 from ..content import Content, get_content
 from ..models import OPEN_STATUSES, CharacterRecord, StoryChoiceLog, StoryEventInstance
 from . import store
@@ -123,6 +124,15 @@ def ordered_open(ctx: StoryContext) -> list[StoryEventInstance]:
 
 # ---------------------------------------------------------------- views
 
+def _npc_view(ctx: StoryContext, definition_id: str) -> dict:
+    """The named character an encounter is with: authored title and description, and their runtime name and status."""
+    d = named.definitions().get(definition_id)
+    npc = named.get_instance(ctx.session, ctx.campaign_id, definition_id)
+    return {"id": definition_id, "name": npc.name if npc else (d.name if d else definition_id),
+            "title": d.title if d else None, "description": d.description if d else "",
+            "status": npc.status.value if npc else None}
+
+
 def instance_view(ctx: StoryContext, inst: StoryEventInstance) -> dict:
     d = ctx.library.get(inst.event_id)
     choices = []
@@ -138,6 +148,7 @@ def instance_view(ctx: StoryContext, inst: StoryEventInstance) -> dict:
         "narrative": d.narrative if d else "", "status": inst.status,
         "created_year": inst.created_year, "expires_year": inst.expires_year,
         "selected_choice_id": inst.selected_choice_id, "choices": choices,
+        "npc": _npc_view(ctx, d.npc) if d and d.npc else None,
     }
 
 

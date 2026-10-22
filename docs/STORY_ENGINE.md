@@ -97,6 +97,13 @@ parameters are rejected.
 
 Story flags (`StoryFlag`) are separate from the legacy `CharacterRecord.flags` list, because they carry values.
 
+## Named characters
+
+Further condition and effect types, registered the same way, let events refer to authored named NPCs by their
+definition id: conditions `npc_exists`, `npc_status`, `npc_related`, `npc_flag_equals`, `npc_flag_at_least`; effects
+`spawn_npc`, `set_npc_flag`, `increment_npc_flag`, `set_npc_status`, `link_npc`; and an optional event field `npc`.
+References are checked by the content validator. Full reference: `NAMED_NPCS.md`.
+
 ## Triggers
 
 `"trigger": {"type": ..., ...params}`. A trigger says *when to consider* an event; eligibility `conditions` and the

@@ -11,6 +11,16 @@ export default function StoryEventPanel({ event, busy, onChoose }: Props) {
   return (
     <section className="card event">
       <p className="eyebrow gold">Something happens</p>
+      {event.npc && (
+        <p className="npc-speaker">
+          <strong>{event.npc.name}</strong>
+          {event.npc.title && <span className="muted"> · {event.npc.title}</span>}
+          {event.npc.status && event.npc.status !== 'active' && (
+            <span className="muted small"> ({event.npc.status})</span>
+          )}
+          {event.npc.description && <span className="muted small npc-desc">{event.npc.description}</span>}
+        </p>
+      )}
       <h2>{event.title}</h2>
       <p className="lead">{event.narrative}</p>
       {event.skippable && (

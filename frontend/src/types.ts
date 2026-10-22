@@ -212,6 +212,16 @@ export interface StoryChoice {
   locked_hint: string | null
 }
 
+/** The named character a story encounter is with (GET /api/story/events/pending). */
+export interface StoryNpc {
+  id: string
+  name: string
+  title: string | null
+  description: string
+  /** active | deceased | retired, or null until the character has been introduced in this game */
+  status: string | null
+}
+
 export interface StoryEvent {
   instance_id: number
   event_id: string
@@ -226,6 +236,7 @@ export interface StoryEvent {
   expires_year: number | null
   selected_choice_id: string | null
   choices: StoryChoice[]
+  npc: StoryNpc | null
 }
 
 export interface StoryResolution {

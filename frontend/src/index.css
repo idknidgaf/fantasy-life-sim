@@ -368,3 +368,7 @@ fieldset.species-grid { border: none; padding: 0; margin: 0; display: grid; gap:
 }
 .log p.kind-legacy { color: var(--gold); font-weight: 600; }
 .past-lives { margin-top: 1rem; }
+
+/* ---- Named character in an encounter ---- */
+.npc-speaker { margin: 0.2rem 0 0.4rem; }
+.npc-desc { display: block; }

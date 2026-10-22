@@ -13,7 +13,9 @@ from pydantic import ValidationError
 
 from ..content import DATA_DIR, Content, get_content
 from . import conditions as cond
+from ..npc import get_named_characters
 from .errors import StoryContentError
+from .npc_hooks import NPC_REFERENCES, PLAYER
 from .schema import EventDefinition, EventFile
 
 STORY_DIR = DATA_DIR / "story"
@@ -32,8 +34,10 @@ class StoryLibrary:
         return len(self.events)
 
 
-def build_library(raw_events: list[tuple[str, dict]], content: Content | None = None) -> StoryLibrary:
-    """Validate raw event dicts, given as (source name, event). Raises StoryContentError listing every problem."""
+def build_library(raw_events: list[tuple[str, dict]], content: Content | None = None,
+                  named: dict | None = None) -> StoryLibrary:
+    """Validate raw event dicts, given as (source name, event). Raises StoryContentError listing every problem.
+    `named` is the authored named characters (id -> definition); when given, every reference to one is checked."""
     errors: list[str] = []
     events: dict[str, EventDefinition] = {}
     sources: dict[str, str] = {}
@@ -50,22 +54,33 @@ def build_library(raw_events: list[tuple[str, dict]], content: Content | None = 
             errors.append(f"{label}: duplicate event id (also defined in {sources[ev.id]})")
             continue
         events[ev.id], sources[ev.id] = ev, source
-    errors += _cross_check(events, sources, content)
+    errors += _cross_check(events, sources, content, named)
     if errors:
         raise StoryContentError(errors)
     return StoryLibrary(events)
 
 
-def _cross_check(events: dict[str, EventDefinition], sources: dict[str, str], content: Content | None) -> list[str]:
+def _cross_check(events: dict[str, EventDefinition], sources: dict[str, str], content: Content | None,
+                 named: dict | None = None) -> list[str]:
     errors: list[str] = []
 
     def check_event_ref(where: str, ref: str) -> None:
         if ref not in events:
             errors.append(f"{where}: refers to unknown event '{ref}'")
 
+    def check_npcs(where: str, item: dict) -> None:
+        """A condition or effect that names named characters: every one must be defined."""
+        if named is None:
+            return
+        for key in NPC_REFERENCES.get(item["type"], ()):
+            ref = item[key]
+            if not (key == "other" and ref == PLAYER) and ref not in named:
+                errors.append(f"{where}: refers to unknown named character '{ref}'")
+
     def check_conditions(where: str, tree: dict | None) -> None:
         for leaf in cond.walk(tree):
             t = leaf["type"]
+            check_npcs(where, leaf)
             if t in ("event_completed", "choice_was_made"):
                 check_event_ref(where, leaf["event"])
                 if t == "choice_was_made" and leaf["event"] in events and events[leaf["event"]].choice(leaf["choice"]) is None:
@@ -76,20 +91,25 @@ def _cross_check(events: dict[str, EventDefinition], sources: dict[str, str], co
     for ev in events.values():
         base = f"{sources[ev.id]}: {ev.id}"
         check_conditions(f"{base} conditions", ev.conditions)
+        if ev.npc is not None and named is not None and ev.npc not in named:
+            errors.append(f"{base}: npc refers to unknown named character '{ev.npc}'")
         for ch in ev.choices:
             where = f"{base} choice '{ch.id}'"
             check_conditions(f"{where} conditions", ch.conditions)
             if ch.next_event is not None:
                 check_event_ref(f"{where} next_event", ch.next_event)
             for fx in ch.effects:
+                check_npcs(f"{where} effect {fx['type']}", fx)
                 if fx["type"] in ("start_event", "complete_event"):
                     check_event_ref(f"{where} effect {fx['type']}", fx["event"])
                 if fx["type"] == "grant_trait" and content is not None and fx["trait"] not in content.traits:
                     errors.append(f"{where}: grant_trait refers to unknown trait '{fx['trait']}'")
+    for d in (named or {}).values():
+        check_conditions(f"named character '{d.id}' encounter.conditions", d.encounter.conditions)
     return errors
 
 
-def load_library(directory: Path = STORY_DIR, content: Content | None = None) -> StoryLibrary:
+def load_library(directory: Path = STORY_DIR, content: Content | None = None, named: dict | None = None) -> StoryLibrary:
     """Load every *.json file in a directory (an empty or missing directory is an empty library)."""
     raw_events: list[tuple[str, dict]] = []
     errors: list[str] = []
@@ -112,7 +132,7 @@ def load_library(directory: Path = STORY_DIR, content: Content | None = None) ->
             errors.append(f"{path.name}: unknown top-level key(s): {sorted(extra)}")
         raw_events += [(path.name, e) for e in data.get("events", [])]
     try:
-        library = build_library(raw_events, content)
+        library = build_library(raw_events, content, named)
     except StoryContentError as e:
         errors += e.errors
         library = None
@@ -123,4 +143,4 @@ def load_library(directory: Path = STORY_DIR, content: Content | None = None) ->
 
 @lru_cache
 def get_story_library() -> StoryLibrary:
-    return load_library(content=get_content())
+    return load_library(content=get_content(), named=get_named_characters())

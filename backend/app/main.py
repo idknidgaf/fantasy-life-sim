@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlmodel import Session, delete, select
 
-from . import battle_store, legacy
+from . import battle_store, legacy, named
 from . import engine as sim
 from .combat import get_combat_config
 from .content import STATS, get_content
@@ -134,11 +134,14 @@ def _campaign_read(session: Session, campaign: Campaign) -> CampaignRead:
 def _mutate(session: Session, change: Callable[[sim.Character, int], object], *,
             story_scans: Callable[[], list[tuple[str, dict]]] | None = None,
             blocked_by_story: bool = False,
+            world_years: int = 0,
             record_battle: Callable[[CharacterRecord, object], None] | None = None) -> CharacterRead:
     """Load the active character, apply a rule from the engine, save, return it.
 
     blocked_by_story: refuse while a story event waits for a decision (as for a legacy pending event).
     story_scans: story trigger scans to run after the change, in the same transaction as the save.
+    world_years: the world's clock moved on this many years: named characters already introduced age by their own
+    lifecycle rule (named.advance_all), in this same transaction and before the story scans see them.
     record_battle: called with the saved record and whatever `change` returned; it stores a battle summary in the
     same transaction as the consequences, so a fight and its record are saved together or not at all.
     Any open (undismissed) summary is closed first: acting again means the player has moved past it.
@@ -160,6 +163,8 @@ def _mutate(session: Session, change: Callable[[sim.Character, int], object], *,
         record_battle(rec, result)
     if not rec.alive:                                # however they died, the life is completed, once, right here
         legacy.complete_life(session, rec)
+    if world_years and c.alive:
+        named.advance_all(session, campaign.id, world_years)
     if story_scans and c.alive:                      # queue eligible story events; never touches pending_event
         story_service.run_scans(story_service.make_context(session, rec), story_scans())
     session.commit()
@@ -281,7 +286,7 @@ def perform_action(action_id: str, session: Session = Depends(get_session)):
 
 @api.post("/turn/advance", response_model=CharacterRead)
 def advance_turn(session: Session = Depends(get_session)):
-    return _mutate(session, sim.advance_turn, blocked_by_story=True,
+    return _mutate(session, sim.advance_turn, blocked_by_story=True, world_years=1,
                    story_scans=lambda: [("age", {}), ("state", {})])
 
 

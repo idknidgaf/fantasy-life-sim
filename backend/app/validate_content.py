@@ -55,7 +55,7 @@ def main() -> int:
         return 1
     print(f"OK: inheritance.yaml ({len(rules.crossings)} species crossings)")
     try:
-        story = load_library(content=ct)
+        story = load_library(content=ct, named=named)
     except StoryContentError as e:
         print("STORY CONTENT INVALID\n" + str(e))
         return 1

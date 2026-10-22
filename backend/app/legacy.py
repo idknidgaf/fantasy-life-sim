@@ -13,7 +13,7 @@ Reuse, not duplication.
     Nothing about them is rolled again.
 
 Eligibility: a living descendant of the dead character (a child, grandchild and so on, nearest generation first) who is
-a kept NPC with status `active`. Dead and retired characters, temporary NPCs, everyone who is not descended from them,
+a persistent NPC with status `active` (authored named characters are never offered). Dead and retired characters, temporary NPCs, everyone who is not descended from them,
 other playable lives and the dead character themselves are never offered. With no heir the game is over; nobody
 unrelated is ever chosen.
 
@@ -31,7 +31,7 @@ from sqlmodel import Session, col, select
 
 from .content import Content, get_content
 from .models import OPEN_STATUSES, CharacterRecord, LifeRecord, NpcRecord, PlayableRole, StoryEventInstance
-from .npc import Npc, npc_power, to_character
+from .npc import CharacterCategory, Npc, npc_power, to_character
 from .power import get_power_config
 from .relationships import children_of, eligible_descendants, player_ref, rekey_character
 from .rules import max_health
@@ -121,7 +121,10 @@ def eligible_heirs(session: Session, rec: CharacterRecord) -> list[Npc]:
     """The living, kept descendants of a dead character, nearest generation first. Empty while they are alive."""
     if rec.alive:
         return []
-    return eligible_descendants(session, rec.campaign_id, player_ref(rec))
+    # An authored (named) character is never an heir: becoming the player would retire the one instance that stories
+    # and their definition point at. Only ordinary persistent descendants carry on.
+    return [h for h in eligible_descendants(session, rec.campaign_id, player_ref(rec))
+            if h.category != CharacterCategory.NAMED]
 
 
 class HeirRead(BaseModel):
