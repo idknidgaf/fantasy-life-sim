@@ -6,25 +6,27 @@ import DeathSummary from './components/DeathSummary'
 import EventLog from './components/EventLog'
 import EventPanel from './components/EventPanel'
 import LifeTab from './components/LifeTab'
+import PastLives from './components/PastLives'
 import NavSidebar, { type Tab } from './components/NavSidebar'
 import PowerTab from './components/PowerTab'
 import StoryEventPanel from './components/StoryEventPanel'
 import StartScreen from './components/StartScreen'
 import VitalsPanel from './components/VitalsPanel'
 import type {
-  Campaign, Character, HistoryEntry, Option, PowerBreakdown, Species, StoryEvent,
+  Campaign, Character, HistoryEntry, Legacy, Option, PowerBreakdown, Species, StoryEvent,
 } from './types'
 
 /** Everything the game screen needs, fetched from the active campaign. */
 async function loadActive() {
-  const [character, actions, history, storyEvents, power] = await Promise.all([
+  const [character, actions, history, storyEvents, power, legacy] = await Promise.all([
     api.getCharacter(),
     api.getActions(),
     api.getHistory(),
     api.getPendingStoryEvents().catch(() => [] as StoryEvent[]),
     api.getPower().catch(() => null as PowerBreakdown | null),
+    api.getLegacy().catch(() => null as Legacy | null),
   ])
-  return { character, actions, history, storyEvents, power }
+  return { character, actions, history, storyEvents, power, legacy }
 }
 
 export default function App() {
@@ -36,6 +38,7 @@ export default function App() {
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [storyEvents, setStoryEvents] = useState<StoryEvent[]>([])
   const [power, setPower] = useState<PowerBreakdown | null>(null)
+  const [legacy, setLegacy] = useState<Legacy | null>(null)
   const [prevStats, setPrevStats] = useState<Record<string, number> | null>(null)
   const [tab, setTab] = useState<Tab>('character')
   const [inMenu, setInMenu] = useState(true)
@@ -65,6 +68,7 @@ export default function App() {
           setHistory(s.history)
           setStoryEvents(s.storyEvents)
           setPower(s.power)
+          setLegacy(s.legacy)
           setInMenu(false)
         }
       } catch (e) {
@@ -98,6 +102,7 @@ export default function App() {
     setHistory(s.history)
     setStoryEvents(s.storyEvents)
           setPower(s.power)
+          setLegacy(s.legacy)
     setPrevStats(previous)
     setInMenu(false)
   }
@@ -147,6 +152,14 @@ export default function App() {
 
   // Continue dismisses the stored summary. The backend's queue is untouched, so the next pending encounter appears.
   const continueAfterBattle = (battleId: number) => change(() => api.acknowledgeBattle(battleId))
+
+  // The chosen heir becomes the playable character; the screen then reloads as that character. Safe to repeat.
+  // No stat-change baseline: the heir's numbers are not "changes" from the dead character's.
+  const continueAsHeir = (npcId: string) =>
+    guard(async () => {
+      await api.continueAsHeir(npcId)
+      await showActive()
+    })
 
   const resolveStoryEvent = (instanceId: number, choiceId: string) =>
     change(() => api.resolveStoryEvent(instanceId, choiceId))
@@ -203,17 +216,26 @@ export default function App() {
                 onContinue={() => continueAfterBattle(character.battle_summary!.id!)}
               />
             ) : !character.alive && character.summary ? (
-              <DeathSummary summary={character.summary} onNewLife={goToMenu} />
+              <DeathSummary
+                summary={character.summary}
+                legacy={legacy}
+                busy={busy}
+                onContinueAs={continueAsHeir}
+                onNewLife={goToMenu}
+              />
             ) : character.pending_event ? (
               <EventPanel event={character.pending_event} busy={busy} onChoose={resolveEvent} />
             ) : currentStoryEvent ? (
               <StoryEventPanel event={currentStoryEvent} busy={busy} onChoose={resolveStoryEvent} />
             ) : tab === 'character' ? (
-              <CharacterSheet
-                character={character}
-                prevStats={prevStats}
-                skillCategories={skillCategories}
-              />
+              <>
+                <CharacterSheet
+                  character={character}
+                  prevStats={prevStats}
+                  skillCategories={skillCategories}
+                />
+                {legacy && <PastLives lives={legacy.lives} />}
+              </>
             ) : tab === 'power' ? (
               <PowerTab power={power} />
             ) : (

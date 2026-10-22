@@ -1,5 +1,5 @@
 import type {
-  Campaign, Character, HistoryEntry, Option, PowerBreakdown, Species, StoryEvent, StoryResolution,
+  Campaign, Character, HistoryEntry, Legacy, Option, PowerBreakdown, Species, StoryEvent, StoryResolution,
 } from './types'
 
 const BASE: string = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
@@ -53,6 +53,9 @@ export const api = {
   acknowledgeBattle: (battleId: number) => post<Character>(`/battles/${battleId}/acknowledge`),
   getHistory: () => request<HistoryEntry[]>('/history'),
   getPower: () => request<PowerBreakdown>('/power'),
+  getLegacy: () => request<Legacy>('/legacy'),
+  /** Carry on as an eligible descendant. Repeating it is harmless. */
+  continueAsHeir: (npcId: string) => post<Character>('/legacy/continue', { npc_id: npcId }),
 
   // Data-driven story engine
   getPendingStoryEvents: () => request<StoryEvent[]>('/story/events/pending'),

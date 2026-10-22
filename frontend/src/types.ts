@@ -284,3 +284,31 @@ export interface PowerBreakdown {
   formula: PowerFormula
   notes: string[]
 }
+
+/** Family legacy, from GET /api/legacy. */
+export interface Heir {
+  npc_id: string
+  name: string
+  species_id: string
+  species_name: string
+  age: number
+  relation: 'child' | 'descendant'
+  power: number
+  traits: string[]
+}
+
+export interface PastLife {
+  character_id: number
+  name: string
+  species_name: string
+  age: number
+  cause_of_death: string | null
+  successor_name: string | null
+  current: boolean
+}
+
+export interface Legacy {
+  status: 'alive' | 'awaiting_heir' | 'game_over'
+  heirs: Heir[]
+  lives: PastLife[]
+}

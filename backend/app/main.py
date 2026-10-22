@@ -4,14 +4,17 @@ from typing import Callable
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from sqlmodel import Session, delete, select
 
-from . import battle_store
+from . import battle_store, legacy
 from . import engine as sim
 from .combat import get_combat_config
 from .content import STATS, get_content
 from .db import get_session, init_db
-from .models import Campaign, CharacterRecord, CombatRecord, StoryChoiceLog, StoryEventInstance, StoryFlag
+from .models import (
+    Campaign, CharacterRecord, CombatRecord, LifeRecord, PlayableRole, StoryChoiceLog, StoryEventInstance, StoryFlag,
+)
 from .npc_store import delete_campaign_npcs
 from .rules import (
     alignment_label, describe_trait_effects, effective_stat, max_health, pretty, species_of,
@@ -49,11 +52,8 @@ api = APIRouter(prefix="/api")
 # ---------- helpers ----------
 
 def _record_for(session: Session, campaign_id: int) -> CharacterRecord | None:
-    return session.exec(
-        select(CharacterRecord)
-        .where(CharacterRecord.campaign_id == campaign_id)
-        .order_by(CharacterRecord.id.desc())
-    ).first()
+    """The character the player controls: the holder of the campaign's playable role (see legacy.py)."""
+    return legacy.player_record(session, campaign_id)
 
 
 def _active(session: Session) -> tuple[Campaign, CharacterRecord]:
@@ -158,6 +158,8 @@ def _mutate(session: Session, change: Callable[[sim.Character, int], object], *,
     battle_store.acknowledge_all(session, rec)
     if record_battle and result is not None:
         record_battle(rec, result)
+    if not rec.alive:                                # however they died, the life is completed, once, right here
+        legacy.complete_life(session, rec)
     if story_scans and c.alive:                      # queue eligible story events; never touches pending_event
         story_service.run_scans(story_service.make_context(session, rec), story_scans())
     session.commit()
@@ -245,7 +247,7 @@ def delete_campaign(campaign_id: int, session: Session = Depends(get_session)):
     campaign = session.get(Campaign, campaign_id)
     if campaign is None:
         raise HTTPException(404, "Campaign not found")
-    for story_table in (CombatRecord, StoryChoiceLog, StoryEventInstance, StoryFlag):      # story state belongs to the life
+    for story_table in (CombatRecord, StoryChoiceLog, StoryEventInstance, StoryFlag, LifeRecord, PlayableRole):      # story state belongs to the life
         session.exec(delete(story_table).where(story_table.campaign_id == campaign_id))
     delete_campaign_npcs(session, campaign_id)             # its NPCs and their relationships belong to the life too
     for rec in session.exec(select(CharacterRecord).where(CharacterRecord.campaign_id == campaign_id)):
@@ -304,6 +306,32 @@ def acknowledge_battle(battle_id: int, session: Session = Depends(get_session)):
     session.commit()
     session.refresh(rec)
     return _character_read(rec, session)
+
+
+class ContinueRequest(BaseModel):
+    npc_id: str | None = None          # may be left out when exactly one descendant is eligible
+
+
+@api.get("/legacy", response_model=legacy.LegacyRead)
+def get_legacy(session: Session = Depends(get_session)):
+    """Where the family line stands: alive, waiting for an heir to be chosen, or ended. Lists the eligible heirs and
+    the lives completed so far."""
+    _, rec = _active(session)
+    state = legacy.legacy_state(session, rec)
+    session.commit()                               # a dead character from an older save gets their life recorded
+    return state
+
+
+@api.post("/legacy/continue", response_model=CharacterRead)
+def continue_legacy(body: ContinueRequest | None = None, session: Session = Depends(get_session)):
+    """Carry on as an eligible descendant of the dead character. Retrying the same request is harmless."""
+    _, rec = _active(session)
+    try:
+        new = legacy.continue_as(session, rec, body.npc_id if body else None)
+    except legacy.LegacyError as e:
+        raise HTTPException(e.status_code, str(e))
+    session.refresh(new)
+    return _character_read(new, session)
 
 
 @api.get("/power", response_model=PowerBreakdown)

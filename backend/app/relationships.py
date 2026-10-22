@@ -284,6 +284,25 @@ def remove_all_for(session: Session, campaign_id: int, ref: str) -> int:
     return result.rowcount or 0
 
 
+def rekey_character(session: Session, campaign_id: int, old: str, new: str) -> int:
+    """Point every link of `old` at `new`, for a character whose id changes (an NPC who becomes the playable
+    character). Nothing is lost and nothing is added: the same links, the same kinds, the same other ends.
+    Symmetric links are stored with their two ids in sorted order, so those are put back in order."""
+    if old == new:
+        return 0
+    links = relationships_of(session, campaign_id, old)
+    for link in links:
+        if link.source_id == old:
+            link.source_id = new
+        if link.target_id == old:
+            link.target_id = new
+        if RelationshipKind(link.kind) in SYMMETRIC and link.source_id > link.target_id:
+            link.source_id, link.target_id = link.target_id, link.source_id
+        session.add(link)
+    session.flush()
+    return len(links)
+
+
 def prune_dangling(session: Session, campaign_id: int) -> int:
     """Remove links whose characters no longer exist. Returns how many were removed."""
     links = list(session.exec(select(CharacterRelationship).where(CharacterRelationship.campaign_id == campaign_id)))

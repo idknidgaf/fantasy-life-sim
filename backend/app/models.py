@@ -224,3 +224,36 @@ class CharacterRelationship(SQLModel, table=True):
     kind: str
     source_id: str
     target_id: str
+
+
+# ---------------------------------------------------------------- legacy: lives and the playable role
+# Both are new tables, so existing saves need no migration (create_all adds them).
+
+class PlayableRole(SQLModel, table=True):
+    """Which character the player controls in a campaign: a role held by one existing CharacterRecord, not a copy.
+
+    One row per campaign (unique). Switching the playable character means pointing this row at another record.
+    With no row (every save from before legacy existed) the campaign's newest record is the playable one."""
+    __table_args__ = (UniqueConstraint("campaign_id", name="uq_playable_role_campaign"),)
+    id: int | None = Field(default=None, primary_key=True)
+    campaign_id: int = Field(foreign_key="campaign.id", index=True)
+    character_id: int = Field(foreign_key="characterrecord.id")
+    changed_at: datetime = Field(default_factory=_now)
+
+
+class LifeRecord(SQLModel, table=True):
+    """A completed life. It only points at the dead CharacterRecord, which already holds the identity, final
+    attributes, history and cause of death (and the family links keep naming it), so nothing is copied.
+
+    One row per dead character (unique): a death is recorded once however often it is processed. Choosing an heir
+    fills successor_npc_id first, as the claim that makes a second attempt fail, then successor_character_id.
+    successor_npc_id is kept because the heir's NPC row is retired once it has become the playable character,
+    and it is what lets a repeated request recognise the choice it already carried out."""
+    __table_args__ = (UniqueConstraint("character_id", name="uq_life_character"),)
+    id: int | None = Field(default=None, primary_key=True)
+    campaign_id: int = Field(foreign_key="campaign.id", index=True)
+    character_id: int = Field(foreign_key="characterrecord.id")
+    successor_character_id: int | None = Field(default=None, foreign_key="characterrecord.id")
+    successor_npc_id: str | None = None
+    created_at: datetime = Field(default_factory=_now)
+    resolved_at: datetime | None = None

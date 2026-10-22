@@ -358,3 +358,13 @@ fieldset.species-grid { border: none; padding: 0; margin: 0; display: grid; gap:
 .battle-lines li { background: var(--panel-2); border: 1px solid var(--border); border-radius: 99px; padding: 0.15rem 0.7rem; font-size: 0.9rem; }
 .battle-death { color: var(--red); font-weight: 600; }
 .battle-continue { margin-top: 1rem; width: 100%; padding: 0.7rem 1rem; }
+
+/* ---- Legacy ---- */
+.legacy-choice { margin: 1.25rem 0 0.5rem; }
+.heirs { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
+.heir {
+  display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.7rem 0.9rem;
+}
+.log p.kind-legacy { color: var(--gold); font-weight: 600; }
+.past-lives { margin-top: 1rem; }
