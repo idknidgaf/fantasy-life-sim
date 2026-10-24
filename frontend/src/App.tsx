@@ -8,6 +8,7 @@ import EventPanel from './components/EventPanel'
 import LifeTab from './components/LifeTab'
 import PastLives from './components/PastLives'
 import NavSidebar, { type Tab } from './components/NavSidebar'
+import PeopleTab from './components/PeopleTab'
 import PowerTab from './components/PowerTab'
 import StoryEventPanel from './components/StoryEventPanel'
 import StartScreen from './components/StartScreen'
@@ -238,6 +239,8 @@ export default function App() {
               </>
             ) : tab === 'power' ? (
               <PowerTab power={power} />
+            ) : tab === 'people' ? (
+              <PeopleTab />
             ) : (
               <LifeTab
                 character={character}

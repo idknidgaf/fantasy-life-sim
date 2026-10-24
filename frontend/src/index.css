@@ -372,3 +372,33 @@ fieldset.species-grid { border: none; padding: 0; margin: 0; display: grid; gap:
 /* ---- Named character in an encounter ---- */
 .npc-speaker { margin: 0.2rem 0 0.4rem; }
 .npc-desc { display: block; }
+
+/* ---- People (Character tab) ---- */
+.people-tab { padding: 1.25rem; }
+.people-groups { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+.people-group {
+  display: flex; align-items: center; gap: 0.4rem;
+  padding: 0.45rem 0.8rem; font-size: 0.88rem;
+}
+.people-group.active { border-color: var(--gold); background: #241d16; color: var(--gold); }
+.people-count {
+  min-width: 1.3rem; padding: 0 0.35rem; border-radius: 99px; text-align: center;
+  background: var(--bg); border: 1px solid var(--border); font-size: 0.75rem; font-variant-numeric: tabular-nums;
+}
+.people-hint { margin: 0 0 0.6rem; }
+.people-empty { padding: 1rem 0; text-align: center; }
+.people-error { padding: 0.5rem 0; }
+.people-error p { color: var(--red); margin: 0 0 0.5rem; }
+.npc-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.npc-entry { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 0.75rem; }
+.npc-line { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
+.npc-name { font-weight: 600; }
+.npc-title { color: var(--gold); font-size: 0.8rem; font-style: italic; }
+.npc-status { margin-left: auto; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+.npc-status.status-alive { color: var(--green); }
+.npc-status.status-deceased { color: var(--red); }
+.npc-status.status-away { color: var(--blue); }
+.npc-status.status-unknown { color: var(--muted); }
+.npc-meta { display: flex; gap: 0.35rem 0.9rem; flex-wrap: wrap; margin-top: 0.15rem; }
+.closeness { display: grid; grid-template-columns: 4.5rem 1fr; gap: 0.5rem; align-items: center; margin-top: 0.35rem; }
+.closeness-fill { background: var(--green); }

@@ -323,3 +323,36 @@ export interface Legacy {
   heirs: Heir[]
   lives: PastLife[]
 }
+
+// ---- NPCs: the Character tab's read-only list (GET /api/npcs). Matches backend NpcSummaryRead / NpcListRead. ----
+
+/** The three groups of the tab. The backend decides who belongs where. */
+export type NpcGroup = 'family' | 'acquaintances' | 'notable'
+
+export type NpcStatus = 'active' | 'deceased' | 'retired'
+
+export interface NpcSummary {
+  id: string
+  name: string
+  category: 'persistent' | 'named'
+  status: NpcStatus
+  species: SpeciesBrief
+  age: number
+  stage: Stage
+  power: number
+  /** How they relate to the player: direct links and family roles, e.g. "child", "friend", "half_sibling". */
+  relations: string[]
+  /** Authored title of a named character. Persistent NPCs have none. */
+  title: string | null
+  /** Every group this NPC belongs to. */
+  categories: NpcGroup[]
+  /** 0-100 for a personal relationship; null when none is recorded (the backend stores none yet). */
+  closeness: number | null
+}
+
+export interface NpcList {
+  total: number
+  limit: number
+  offset: number
+  items: NpcSummary[]
+}

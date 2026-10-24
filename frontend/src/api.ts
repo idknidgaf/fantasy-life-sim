@@ -1,5 +1,6 @@
 import type {
-  Campaign, Character, HistoryEntry, Legacy, Option, PowerBreakdown, Species, StoryEvent, StoryResolution,
+  Campaign, Character, HistoryEntry, Legacy, NpcGroup, NpcList, Option, PowerBreakdown, Species, StoryEvent,
+  StoryResolution,
 } from './types'
 
 const BASE: string = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
@@ -56,6 +57,9 @@ export const api = {
   getLegacy: () => request<Legacy>('/legacy'),
   /** Carry on as an eligible descendant. Repeating it is harmless. */
   continueAsHeir: (npcId: string) => post<Character>('/legacy/continue', { npc_id: npcId }),
+
+  /** The NPCs of one Character-tab group, read-only. The backend caps a page at 100. */
+  listNpcs: (group: NpcGroup, limit = 100) => request<NpcList>(`/npcs?category=${enc(group)}&limit=${limit}`),
 
   // Data-driven story engine
   getPendingStoryEvents: () => request<StoryEvent[]>('/story/events/pending'),

@@ -82,7 +82,8 @@ def test_a_child_born_to_a_known_npc_is_known_too(client, world):
 
 def test_summary_shape(world):
     item = next(i for i in get(world, "").json()["items"] if i["id"] == world["kid"])
-    assert set(item) == {"id", "name", "category", "status", "species", "age", "stage", "power", "relations", "title"}
+    assert set(item) == {"id", "name", "category", "status", "species", "age", "stage", "power", "relations", "title",
+                         "categories", "closeness"}
     assert item["relations"] == ["child"] and item["species"]["id"] == "human" and item["age"] == 0
     assert item["stage"]["id"] == "infancy" and isinstance(item["power"], float)
 

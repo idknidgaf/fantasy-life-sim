@@ -15,20 +15,24 @@ Unknown, missing, generic, other-campaign NPCs are all the same `404 {"detail": 
 
 ## Endpoints (all under `/api`)
 
-### `GET /npcs?limit=25&offset=0&status=&species=`
+### `GET /npcs?limit=25&offset=0&category=&status=&species=`
 
-`limit` 1-100 (default 25), `offset` >= 0, `status` one of `active|deceased|retired`, `species` an id. Out of range -> 422.
-Oldest first.
+`limit` 1-100 (default 25), `offset` >= 0, `category` one of `family|acquaintances|notable` (see `CHARACTER_TAB.md`), `status`
+one of `active|deceased|retired`, `species` an id. Out of range or unknown values -> 422. Oldest first. Each NPC is listed
+once; `total` counts the filtered set.
 
 ```json
 {"total": 2, "limit": 25, "offset": 0, "items": [{
   "id": "npc_7917...", "name": "Halania Brookwood", "category": "persistent", "status": "active",
   "species": {"id": "human", "name": "Human", "category": "humanoid"}, "age": 0,
   "stage": {"id": "infancy", "name": "Infant", "description": "..."},
-  "power": 0.0, "relations": ["child"], "title": null}]}
+  "power": 0.0, "relations": ["child"], "title": null, "categories": ["family"], "closeness": null}]}
 ```
 
-`relations` is how they relate to the player from the direct links: `parent`, `child`, `mentor`, `mentee`, `friend`, ...
+`relations` is how they relate to the player: direct links (`parent`, `child`, `mentor`, `mentee`, `friend`, `partner`,
+`rival`) and family roles (`sibling`, `half_sibling`, `grandparent`, `cousin`, `ancestor`, `descendant`), without repeats.
+`categories` lists every Character-tab group the NPC belongs to. `closeness` (0-100) is `null`: the relationship data
+stores no closeness yet, so none is invented.
 
 ### `GET /npcs/{npc_id}`
 
