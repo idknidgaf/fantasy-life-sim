@@ -149,6 +149,49 @@
         "type": "object"
       }
     },
+    "npc_acquainted": {
+      "doc": "The player has an established relationship (is an acquaintance) with the named character.",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "npc": {
+            "minLength": 1,
+            "title": "Npc",
+            "type": "string"
+          }
+        },
+        "required": [
+          "npc"
+        ],
+        "title": "NpcParams",
+        "type": "object"
+      }
+    },
+    "npc_closeness_at_least": {
+      "doc": "They are an acquaintance and closeness is at least value.",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "npc": {
+            "minLength": 1,
+            "title": "Npc",
+            "type": "string"
+          },
+          "value": {
+            "maximum": 100,
+            "minimum": 0,
+            "title": "Value",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "npc",
+          "value"
+        ],
+        "title": "ClosenessParams",
+        "type": "object"
+      }
+    },
     "npc_exists": {
       "doc": "The named character has been introduced in this game (alive or not).",
       "params": {
@@ -296,6 +339,34 @@
         "type": "object"
       }
     },
+    "npc_stance": {
+      "doc": "The character exists and their contact stance toward the player is open | hostile | refused.",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "npc": {
+            "minLength": 1,
+            "title": "Npc",
+            "type": "string"
+          },
+          "stance": {
+            "enum": [
+              "open",
+              "hostile",
+              "refused"
+            ],
+            "title": "Stance",
+            "type": "string"
+          }
+        },
+        "required": [
+          "npc",
+          "stance"
+        ],
+        "title": "StanceParams",
+        "type": "object"
+      }
+    },
     "npc_status": {
       "doc": "The named character exists and has this lifecycle status.",
       "params": {
@@ -362,6 +433,31 @@
     }
   },
   "effect_types": {
+    "change_relationship": {
+      "doc": "Improve (positive amount) or damage (negative) an existing acquaintance. Not an acquaintance: nothing changes.",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "maximum": 100,
+            "minimum": -100,
+            "title": "Amount",
+            "type": "integer"
+          },
+          "npc": {
+            "minLength": 1,
+            "title": "Npc",
+            "type": "string"
+          }
+        },
+        "required": [
+          "npc",
+          "amount"
+        ],
+        "title": "ChangeRelationshipParams",
+        "type": "object"
+      }
+    },
     "complete_event": {
       "doc": "Mark an event as completed without a choice (closes an open instance, or records a finished one).",
       "params": {
@@ -377,6 +473,73 @@
           "event"
         ],
         "title": "EventRefParams",
+        "type": "object"
+      }
+    },
+    "end_relationship": {
+      "doc": "End the personal relationship with an acquaintance. The character is not deleted; family and Notable status stay.",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "npc": {
+            "minLength": 1,
+            "title": "Npc",
+            "type": "string"
+          }
+        },
+        "required": [
+          "npc"
+        ],
+        "title": "NpcParams",
+        "type": "object"
+      }
+    },
+    "establish_acquaintance": {
+      "doc": "The player has personally met this character and now has a relationship with them (an Acquaintance). Only this\n    outcome makes one. Repeating it changes nothing; hostile, refusing or dead characters are not befriended.",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "closeness": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Closeness"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "friend",
+                  "partner",
+                  "rival"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Kind"
+          },
+          "npc": {
+            "minLength": 1,
+            "title": "Npc",
+            "type": "string"
+          }
+        },
+        "required": [
+          "npc"
+        ],
+        "title": "EstablishParams",
         "type": "object"
       }
     },
@@ -516,6 +679,24 @@
         "type": "object"
       }
     },
+    "reveal_npc": {
+      "doc": "The player hears of or meets a character: they become a Notable Figure. Introduces them if they are not yet in\n    the game (only when the definition's `encounter.conditions` hold). Creates no relationship.",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "npc": {
+            "minLength": 1,
+            "title": "Npc",
+            "type": "string"
+          }
+        },
+        "required": [
+          "npc"
+        ],
+        "title": "NpcParams",
+        "type": "object"
+      }
+    },
     "set_flag": {
       "doc": "Set a story flag to a bool, number or string.",
       "params": {
@@ -593,6 +774,34 @@
           "value"
         ],
         "title": "SetNpcFlagParams",
+        "type": "object"
+      }
+    },
+    "set_npc_stance": {
+      "doc": "hostile or refused: the character turns on the player or will not see them again. Any acquaintance ends and none\n    can be made. They never become an acquaintance this way. open: restores contact.",
+      "params": {
+        "additionalProperties": false,
+        "properties": {
+          "npc": {
+            "minLength": 1,
+            "title": "Npc",
+            "type": "string"
+          },
+          "stance": {
+            "enum": [
+              "open",
+              "hostile",
+              "refused"
+            ],
+            "title": "Stance",
+            "type": "string"
+          }
+        },
+        "required": [
+          "npc",
+          "stance"
+        ],
+        "title": "StanceParams",
         "type": "object"
       }
     },

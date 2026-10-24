@@ -215,6 +215,14 @@ class KnownNpc(SQLModel, table=True):
     source: str = "encounter"                    # encounter | story | birth | manual: how they were first met
     first_met_year: int = 0                      # the campaign's world year
     created_at: datetime = Field(default_factory=_now)
+    # The player's PERSONAL relationship with this NPC (see awareness.py). Awareness above belongs to the family line;
+    # this belongs to one playable life, named by `holder` (a `pc_<n>` ref). Read for anyone else it means "none":
+    # an heir is aware of who their parent knew, but is not their parent's friend.
+    holder: str | None = None
+    acquainted: bool = False                     # an established personal relationship (Acquaintances)
+    closeness: int | None = None                 # 0-100 while acquainted, else None
+    stance: str = "open"                         # open | hostile | refused: whether further contact is possible
+    acquainted_year: int | None = None           # the world year it was established
 
 
 class CharacterRelationship(SQLModel, table=True):

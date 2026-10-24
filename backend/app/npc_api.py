@@ -24,7 +24,8 @@ from sqlmodel import Session, col, select
 
 from . import family as fam
 from .character import Character
-from .character_groups import CATEGORIES, Category, family_roles, personal_link_ids
+from .awareness import PersonalState, acquainted_ids, personal_state
+from .character_groups import CATEGORIES, Category, family_roles
 from .content import STATS, Content, get_content
 from .db import get_session
 from .known import is_known, known_ids, met_sources
@@ -57,8 +58,8 @@ class NpcSummaryRead(BaseModel):
                                               # "mentor"...) and family roles ("sibling", "half_sibling", "cousin"...)
     title: str | None = None                  # authored title of a named character
     categories: list[Category] = []           # the Character tab groups they belong to: family, acquaintances, notable
-    closeness: int | None = None              # 0-100 for a personal relationship. The relationship data stores none yet,
-                                              # so this is always null today; the field is the contract for when it does
+    closeness: int | None = None              # 0-100 while an acquaintance (awareness.py); null otherwise
+    contact: Literal["open", "hostile", "refused"] = "open"     # whether further contact is possible
 
 
 class NpcListRead(BaseModel):
@@ -147,17 +148,19 @@ def _relation_words(player: str, links: list[tuple[str, str, str]], npc_id: str)
 
 
 def _summary(npc: Npc, relations: list[str], ct: Content, cfg: PowerConfig,
-             categories: list[Category] | None = None) -> NpcSummaryRead:
+             categories: list[Category] | None = None, personal: PersonalState | None = None) -> NpcSummaryRead:
+    personal = personal or PersonalState()
     d = named.definitions().get(npc.definition or "")
     return NpcSummaryRead(
         id=npc.id, name=npc.name, category=npc.category.value, status=npc.status.value,
         species=_species(ct, npc.species_id), age=npc.age, stage=_stage(ct, npc),
         power=calculate_power(to_character(npc, ct, cfg), ct, cfg).total, relations=relations,
-        title=d.title if d else None, categories=categories or [])
+        title=d.title if d else None, categories=categories or [],
+        closeness=personal.closeness, contact=personal.stance)
 
 
 def _detail(npc: Npc, relations: list[str], met, ct: Content, cfg: PowerConfig,
-            categories: list[Category] | None = None) -> NpcDetailRead:
+            categories: list[Category] | None = None, personal: PersonalState | None = None) -> NpcDetailRead:
     c: Character = to_character(npc, ct, cfg)             # sections missing from the save come from its seed, unsaved
     d = named.definitions().get(npc.definition or "")
     has_stats = bool(c.stats)
@@ -165,7 +168,7 @@ def _detail(npc: Npc, relations: list[str], met, ct: Content, cfg: PowerConfig,
     traits = [ct.traits[t] for t in c.traits if t in ct.traits]
     talent = (ct.talents[c.hidden_talent] if c.talent_state == "awakened" and c.hidden_talent in ct.talents else None)
     breakdown = calculate_power(c, ct, cfg)
-    base = _summary(npc, relations, ct, cfg, categories)
+    base = _summary(npc, relations, ct, cfg, categories, personal)
     return NpcDetailRead(
         **base.model_dump(), surname=npc.surname, description=d.description if d else "",
         cause_of_death=npc.cause_of_death,
@@ -195,11 +198,11 @@ def _roles(direct: list[str], role: str | None) -> list[str]:
     return [*direct, role] if role and role not in direct else direct
 
 
-def _categories_of(npc: Npc, family: dict[str, str], personal: set[str]) -> list[Category]:
+def _categories_of(npc: Npc, family: dict[str, str], acquainted: set[str]) -> list[Category]:
     out: list[Category] = []
     if npc.id in family:
         out.append("family")
-    if npc.category == CharacterCategory.PERSISTENT and npc.id in personal:
+    if npc.id in acquainted:
         out.append("acquaintances")
     if npc.category == CharacterCategory.NAMED:
         out.append("notable")
@@ -236,12 +239,12 @@ def make_router(active_record: Callable[..., CharacterRecord]) -> APIRouter:
             return NpcListRead(total=0, limit=limit, offset=offset, items=[])
         known = set(ids)
         family = {i: r for i, r in family_roles(session, rec.campaign_id, player).items() if i in known}
-        personal = {i for i in personal_link_ids(session, rec.campaign_id, player) if i in known}
+        personal = {i for i in acquainted_ids(session, rec.campaign_id, player) if i in known}
         where = [NpcRecord.campaign_id == rec.campaign_id, NpcRecord.category != GENERIC]
         if category == "family":
             where.append(col(NpcRecord.npc_id).in_(list(family)))
         elif category == "acquaintances":
-            where += [col(NpcRecord.npc_id).in_(list(personal)), NpcRecord.category == CharacterCategory.PERSISTENT.value]
+            where.append(col(NpcRecord.npc_id).in_(list(personal)))
         elif category == "notable":
             where += [col(NpcRecord.npc_id).in_(ids), NpcRecord.category == CharacterCategory.NAMED.value]
         else:
@@ -254,9 +257,10 @@ def make_router(active_record: Callable[..., CharacterRecord]) -> APIRouter:
         rows = session.exec(select(NpcRecord).where(*where).order_by(NpcRecord.id).offset(offset).limit(limit)).all()
         npcs = [Npc.model_validate(r.data) for r in rows]
         links = _links_with_player(session, rec.campaign_id, player, [n.id for n in npcs])
+        met = met_sources(session, rec.campaign_id, [n.id for n in npcs])
         return NpcListRead(total=total, limit=limit, offset=offset, items=[
             _summary(n, _roles(_relation_words(player, links, n.id), family.get(n.id)), ct, cfg,
-                     _categories_of(n, family, personal)) for n in npcs])
+                     _categories_of(n, family, personal), personal_state(met.get(n.id), player)) for n in npcs])
 
     @router.get("/{npc_id}", response_model=NpcDetailRead)
     def get_npc(npc_id: str, session: Session = Depends(get_session), rec: CharacterRecord = Depends(active_record)):
@@ -266,10 +270,10 @@ def make_router(active_record: Callable[..., CharacterRecord]) -> APIRouter:
         npc = Npc.model_validate(row.data)
         links = _links_with_player(session, rec.campaign_id, player, [npc_id])
         family = family_roles(session, rec.campaign_id, player)
-        personal = set(personal_link_ids(session, rec.campaign_id, player))
-        return _detail(npc, _roles(_relation_words(player, links, npc_id), family.get(npc_id)),
-                       met_sources(session, rec.campaign_id, [npc_id]).get(npc_id), ct, cfg,
-                       _categories_of(npc, family, personal))
+        acquainted = set(acquainted_ids(session, rec.campaign_id, player))
+        met = met_sources(session, rec.campaign_id, [npc_id]).get(npc_id)
+        return _detail(npc, _roles(_relation_words(player, links, npc_id), family.get(npc_id)), met, ct, cfg,
+                       _categories_of(npc, family, acquainted), personal_state(met, player))
 
     @router.get("/{npc_id}/family", response_model=FamilyRead)
     def get_family(npc_id: str, session: Session = Depends(get_session), rec: CharacterRecord = Depends(active_record)):

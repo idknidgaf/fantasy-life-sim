@@ -10,7 +10,7 @@ function npc(over: Partial<NpcSummary> & { id: string; name: string }): NpcSumma
   return {
     category: 'persistent', status: 'active', species: { id: 'human', name: 'Human', category: 'humanoid' }, age: 30,
     stage: { id: 'adulthood', name: 'Adult', description: '' }, power: 10, relations: [], title: null,
-    categories: [], closeness: null, ...over,
+    categories: [], closeness: null, contact: 'open', ...over,
   }
 }
 

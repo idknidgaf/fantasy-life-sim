@@ -1,31 +1,30 @@
-"""The three groups of the Character tab, derived from data that already exists (no new tables, no stored copies).
+"""The three groups of the Character tab, derived from data that already exists (no stored copies of the groups).
 
   family          NPCs connected to the player through family links (parent, child, sibling, half-sibling, grandparent,
-                  cousin, further ancestors and descendants: family.family_of), and known to the player.
-  acquaintances   PERSISTENT NPCs with an established personal relationship to the player: a friend, partner, rival or
-                  mentor/mentee link (relationships.py). Family links alone do not make an acquaintance.
-  notable         NAMED NPCs the player knows of: introduced by a story, encountered, or linked to. No personal
-                  relationship is needed: awareness is enough (known.py).
+                  cousin, further ancestors and descendants: family.family_of), and known to the player. Independent of
+                  any personal relationship.
+  acquaintances   NPCs (persistent or named) the player has personally met and holds an established relationship with
+                  (awareness.py). Only an explicit registration creates one; a family link, a friend link made by a
+                  definition, or being mentioned does not.
+  notable         NAMED NPCs the player knows of (known.py): introduced or revealed by a story, encountered, or linked to.
+                  No personal relationship is needed, and one ending never removes it.
 
-An NPC may be in several groups; within one group it appears once (these are sets of ids and the list is a SQL query over
+Awareness, family and personal relationship are three separate states. An NPC may be in several groups (a named NPC
+who is also a friend is Notable AND an Acquaintance); within one group it appears once (sets of ids, and a SQL query over
 one row per NPC). Read-only.
 """
 from __future__ import annotations
 
 from typing import Literal
 
-from sqlalchemy import or_
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from . import family as fam
-from .models import CharacterRelationship
-from .relationships import RelationshipKind
+from .awareness import acquainted_ids  # noqa: F401  (the acquaintance source of truth, re-exported for the API)
 
 Category = Literal["family", "acquaintances", "notable"]
 CATEGORIES: tuple[Category, ...] = ("family", "acquaintances", "notable")
 
-PERSONAL_KINDS = (RelationshipKind.FRIEND.value, RelationshipKind.PARTNER.value, RelationshipKind.RIVAL.value,
-                  RelationshipKind.MENTOR.value)
 NPC_PREFIXES = ("npc_", "named_")
 FAMILY_DEPTH = 4                    # generations of ancestors and descendants considered family
 
@@ -48,12 +47,3 @@ def family_roles(session: Session, campaign_id: int, player: str) -> dict[str, s
         for ref in _npcs_only(refs):
             roles.setdefault(ref, role)                # the first, most specific role wins
     return roles
-
-
-def personal_link_ids(session: Session, campaign_id: int, player: str) -> list[str]:
-    """Every character with a friend, partner, rival or mentor link to the player (either direction), once each."""
-    rows = session.exec(select(CharacterRelationship.source_id, CharacterRelationship.target_id).where(
-        CharacterRelationship.campaign_id == campaign_id, CharacterRelationship.kind.in_(PERSONAL_KINDS),
-        or_(CharacterRelationship.source_id == player, CharacterRelationship.target_id == player))
-        .order_by(CharacterRelationship.id))
-    return _npcs_only(e for pair in rows for e in pair if e != player)

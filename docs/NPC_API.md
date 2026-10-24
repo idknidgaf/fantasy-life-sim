@@ -26,13 +26,13 @@ once; `total` counts the filtered set.
   "id": "npc_7917...", "name": "Halania Brookwood", "category": "persistent", "status": "active",
   "species": {"id": "human", "name": "Human", "category": "humanoid"}, "age": 0,
   "stage": {"id": "infancy", "name": "Infant", "description": "..."},
-  "power": 0.0, "relations": ["child"], "title": null, "categories": ["family"], "closeness": null}]}
+  "power": 0.0, "relations": ["child"], "title": null, "categories": ["family"], "closeness": null, "contact": "open"}]}
 ```
 
 `relations` is how they relate to the player: direct links (`parent`, `child`, `mentor`, `mentee`, `friend`, `partner`,
 `rival`) and family roles (`sibling`, `half_sibling`, `grandparent`, `cousin`, `ancestor`, `descendant`), without repeats.
-`categories` lists every Character-tab group the NPC belongs to. `closeness` (0-100) is `null`: the relationship data
-stores no closeness yet, so none is invented.
+`categories` lists every Character-tab group the NPC belongs to. `closeness` (0-100) is the acquaintance's closeness
+and `null` for anyone who is not an acquaintance. `contact` is `open`, `hostile` or `refused` (`NPC_AWARENESS.md`).
 
 ### `GET /npcs/{npc_id}`
 

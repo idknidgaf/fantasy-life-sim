@@ -123,6 +123,7 @@ Stories refer to a character by **definition id**; `other` may also be `player`.
 | `set_npc_flag {npc, flag, value}`, `increment_npc_flag {npc, flag, amount?}` | change their flags |
 | `set_npc_status {npc, status, cause?}` | an immortal cannot be made deceased |
 | `link_npc {npc, kind, other, role?}` | relate them to another character or the player; repeating is harmless |
+| `reveal_npc {npc}` · `establish_acquaintance {npc, kind?, closeness?}` · `change_relationship {npc, amount}` · `set_npc_stance {npc, stance}` · `end_relationship {npc}` | awareness and personal relationships: who is a Notable Figure and who is an Acquaintance. Only these make an acquaintance; see `NPC_AWARENESS.md` |
 
 An event may also carry `npc: <id>`: the character the encounter is with. The existing encounter window then shows their
 name, title and description. It is a reference only; add `npc_*` conditions to decide when the encounter can happen.

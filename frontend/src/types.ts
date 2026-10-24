@@ -346,8 +346,10 @@ export interface NpcSummary {
   title: string | null
   /** Every group this NPC belongs to. */
   categories: NpcGroup[]
-  /** 0-100 for a personal relationship; null when none is recorded (the backend stores none yet). */
+  /** 0-100 while they are an acquaintance; null otherwise. */
   closeness: number | null
+  /** Whether further contact is possible: they may have turned hostile or refuse to see the player again. */
+  contact: 'open' | 'hostile' | 'refused'
 }
 
 export interface NpcList {

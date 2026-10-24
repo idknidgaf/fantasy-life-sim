@@ -33,6 +33,15 @@ CAMPAIGN_ADDED_COLUMNS = {
 }
 
 
+KNOWN_NPC_ADDED_COLUMNS = {
+    "holder": "VARCHAR",
+    "acquainted": "BOOLEAN NOT NULL DEFAULT 0",
+    "closeness": "INTEGER",
+    "stance": "VARCHAR NOT NULL DEFAULT 'open'",
+    "acquainted_year": "INTEGER",
+}
+
+
 def init_db(eng: Engine | None = None) -> None:
     """Create tables, and upgrade the character and campaign tables of an older save in place."""
     from . import models  # noqa: F401  (registers the tables)
@@ -42,6 +51,7 @@ def init_db(eng: Engine | None = None) -> None:
     _drop_orphaned_npcs(eng)
     _add_missing_columns(eng, models.CharacterRecord, ADDED_COLUMNS)
     _add_missing_columns(eng, models.Campaign, CAMPAIGN_ADDED_COLUMNS)
+    _add_missing_columns(eng, models.KnownNpc, KNOWN_NPC_ADDED_COLUMNS)
 
 
 def _add_missing_columns(eng: Engine, model, known: dict[str, str]) -> None:

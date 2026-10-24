@@ -3,6 +3,7 @@ import pytest
 from sqlmodel import Session, select
 
 from app import named
+from app import awareness
 from app import relationships as rel
 from app.descendants import create_descendant, descendant_seed
 from app.known import record_known
@@ -45,9 +46,9 @@ def game(client, defs, monkeypatch):  # noqa: F811
             save_npc(s, 1, n)
             out[name] = n.id
         rel.add_parent(s, 1, out["kid1"], out["spouse"])                       # the spouse is kid1's second parent
-        rel.add_relationship(s, 1, "friend", pr, out["spouse"])                # ... and the player's friend
-        rel.add_relationship(s, 1, "friend", pr, out["friend"])
-        rel.add_relationship(s, 1, "rival", out["rival"], pr)                  # either direction counts
+        awareness.establish_acquaintance(s, 1, pr, out["spouse"], kind="friend")        # ... and the player's friend
+        awareness.establish_acquaintance(s, 1, pr, out["friend"], kind="friend")
+        awareness.establish_acquaintance(s, 1, pr, out["rival"], kind="rival")
         record_known(s, 1, out["stranger"], "encounter")                       # met, no relationship
         out["sage"] = named.instantiate(s, 1, "test_sage", defs=defs).npc.id   # introduced by a story
         s.commit()
@@ -68,11 +69,15 @@ def test_a_childs_other_parent_is_family_only_through_a_family_link_to_the_playe
     assert game["spouse"] in ids(client, "acquaintances")                       # but they are the player's friend
 
 
-def test_acquaintances_need_a_personal_relationship_and_a_persistent_npc(client, game):
+def test_acquaintances_need_an_established_relationship_not_just_a_link(client, game):
     assert set(ids(client, "acquaintances")) == {game["spouse"], game["friend"], game["rival"]}
     assert game["stranger"] not in ids(client, "acquaintances")                 # met, but no established relationship
     assert game["kid1"] not in ids(client, "acquaintances")                     # a family link is not a friendship
-    assert game["sage"] not in ids(client, "acquaintances")                     # named NPCs are notable, not acquaintances
+    assert game["sage"] not in ids(client, "acquaintances")                     # aware of, not personally acquainted
+    with Session(client.engine) as s:                                           # a bare friend link does not register one
+        rel.add_relationship(s, 1, "friend", game["player"], game["stranger"])
+        s.commit()
+    assert game["stranger"] not in ids(client, "acquaintances")
 
 
 def test_notable_is_named_npcs_the_player_knows_of_without_a_relationship(client, game):
@@ -104,8 +109,8 @@ def test_an_unknown_category_is_rejected(client, game):
 
 def test_an_npc_can_be_in_several_groups_but_once_per_group(client, game):
     with Session(client.engine) as s:
-        rel.add_relationship(s, 1, "friend", rel.player_ref(latest(s)), game["kid1"])      # a child who is also a friend
-        rel.add_relationship(s, 1, "mentor", game["kid1"], rel.player_ref(latest(s)))      # ... and a mentor, a third link
+        awareness.establish_acquaintance(s, 1, rel.player_ref(latest(s)), game["kid1"], kind="friend")   # a child who is also a friend
+        rel.add_relationship(s, 1, "mentor", game["kid1"], rel.player_ref(latest(s)))                    # ... and a mentor, a third link
         s.commit()
     fam, acq = ids(client, "family"), ids(client, "acquaintances")
     assert fam.count(game["kid1"]) == 1 and acq.count(game["kid1"]) == 1
@@ -115,13 +120,12 @@ def test_an_npc_can_be_in_several_groups_but_once_per_group(client, game):
     assert {"child", "friend", "mentor"} <= set(item["relations"]) and len(item["relations"]) == len(set(item["relations"]))
 
 
-def test_a_named_npc_with_a_friend_link_is_notable_and_listed_once(client, game):
+def test_a_named_npc_can_be_both_notable_and_an_acquaintance_once_each(client, game):
     with Session(client.engine) as s:
-        rel.add_relationship(s, 1, "friend", rel.player_ref(latest(s)), game["sage"])
+        awareness.establish_acquaintance(s, 1, rel.player_ref(latest(s)), game["sage"], kind="friend")
         s.commit()
-    assert ids(client, "notable") == [game["sage"]]
-    assert game["sage"] not in ids(client, "acquaintances")
-    assert next(i for i in listing(client)["items"] if i["id"] == game["sage"])["categories"] == ["notable"]
+    assert ids(client, "notable") == [game["sage"]] and ids(client, "acquaintances").count(game["sage"]) == 1
+    assert next(i for i in listing(client)["items"] if i["id"] == game["sage"])["categories"] == ["acquaintances", "notable"]
 
 
 def test_categories_are_reported_on_every_entry(client, game):
@@ -255,7 +259,7 @@ def test_the_group_queries_use_a_bounded_number_of_queries(client, game):
         for i in range(15):
             n = person(age=30, seed=3000 + i)
             save_npc(s, 1, n)
-            rel.add_relationship(s, 1, "friend", rel.player_ref(latest(s)), n.id)
+            awareness.establish_acquaintance(s, 1, rel.player_ref(latest(s)), n.id, kind="friend")
         s.commit()
     assert count() == base
 
