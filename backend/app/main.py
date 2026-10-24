@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlmodel import Session, delete, select
 
-from . import battle_store, legacy, named
+from . import battle_store, legacy, named, npc_world
 from . import engine as sim
 from .combat import get_combat_config
 from .content import STATS, get_content
@@ -22,6 +22,7 @@ from .rules import (
 )
 from .power import PowerBreakdown, calculate_power
 from .story import service as story_service
+from .npc_api import make_router as make_npc_router
 from .story.api import make_router as make_story_router
 from .story.library import get_story_library
 from .schemas import (
@@ -141,7 +142,8 @@ def _mutate(session: Session, change: Callable[[sim.Character, int], object], *,
     blocked_by_story: refuse while a story event waits for a decision (as for a legacy pending event).
     story_scans: story trigger scans to run after the change, in the same transaction as the save.
     world_years: the world's clock moved on this many years: named characters already introduced age by their own
-    lifecycle rule (named.advance_all), in this same transaction and before the story scans see them.
+    lifecycle rule (named.advance_all), and persistent NPCs are brought up to the new world year (age and growth,
+    once per year, npc_world.advance_world), in this same transaction and before the story scans see them.
     record_battle: called with the saved record and whatever `change` returned; it stores a battle summary in the
     same transaction as the consequences, so a fight and its record are saved together or not at all.
     Any open (undismissed) summary is closed first: acting again means the player has moved past it.
@@ -165,6 +167,9 @@ def _mutate(session: Session, change: Callable[[sim.Character, int], object], *,
         legacy.complete_life(session, rec)
     if world_years and c.alive:
         named.advance_all(session, campaign.id, world_years)
+        campaign.world_year += world_years           # the world's clock: NPCs follow it exactly once per year
+        session.add(campaign)
+        npc_world.advance_world(session, campaign.id, campaign.world_year)
     if story_scans and c.alive:                      # queue eligible story events; never touches pending_event
         story_service.run_scans(story_service.make_context(session, rec), story_scans())
     session.commit()
@@ -361,4 +366,5 @@ def _active_record(session: Session = Depends(get_session)) -> CharacterRecord:
 
 
 api.include_router(make_story_router(_active_record))
+api.include_router(make_npc_router(_active_record))
 app.include_router(api)

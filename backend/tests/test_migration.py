@@ -79,3 +79,24 @@ def test_fresh_database_needs_no_upgrade(tmp_path):
     init_db(eng)
     init_db(eng)                                                    # idempotent
     assert not any("backup" in name for name in os.listdir(tmp_path))
+
+
+def test_old_campaign_table_gains_the_world_clock_and_old_npcs_load(tmp_path):
+    from app.models import Campaign, NpcRecord
+    from app.npc import Npc
+    from tests.progress_helpers import person
+    path = tmp_path / "old.db"
+    eng = make_old_save(path)
+    init_db(eng)
+    init_db(eng)                                                # twice is harmless
+    with Session(eng) as s:
+        assert s.get(Campaign, 1).world_year == 0
+        n = person(age=30, seed=5)
+        old = n.model_dump(mode="json")
+        old.pop("progress")
+        old.pop("surname")                                      # exactly what an NPC saved before this change looks like
+        s.add(NpcRecord(campaign_id=1, npc_id=n.id, category="persistent", status="active", species_id="human",
+                        name=n.name, age=30, data=old))
+        s.commit()
+        loaded = Npc.model_validate(s.exec(select(NpcRecord)).one().data)
+        assert loaded.progress is None and loaded.stats == n.stats

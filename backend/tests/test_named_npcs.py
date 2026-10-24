@@ -236,7 +236,7 @@ def test_nothing_is_generated_unless_allowed(defs):
 def test_generate_fills_only_what_was_not_authored(defs):
     pupil = named.build_npc(defs["test_pupil"], campaign_seed=7)
     assert pupil.stats["strength"] == 90                          # authored: fixed, not rolled
-    assert all(30 <= pupil.stats[s] <= 60 for s in pupil.stats if s != "strength")   # generated, in range
+    assert all(20 <= pupil.stats[s] <= CT.species["human"].stat_cap for s in pupil.stats if s != "strength")   # generated (and developed to their age), in range
     assert pupil.skills                                           # specialised stats drawn: none were authored
     assert len(pupil.traits) == 1                                 # random_traits: 1
     assert pupil.talent is not None and pupil.talent_state == "dormant"      # talent_chance: 1.0
@@ -488,7 +488,7 @@ def test_only_introduced_characters_age(defs, world):
     assert named.get_instance(db, 1, "test_plain").age == 45 and named.get_instance(db, 1, "test_sage") is None
 
 
-def test_age_up_ages_introduced_named_characters_and_nobody_else(client, defs, monkeypatch):
+def test_age_up_ages_introduced_named_characters_and_persistent_npcs_by_the_world_clock(client, defs, monkeypatch):
     monkeypatch.setattr("app.named.definitions", lambda: defs)
     new_game(client)
     with Session(client.engine) as s:
@@ -499,7 +499,7 @@ def test_age_up_ages_introduced_named_characters_and_nobody_else(client, defs, m
     assert client.post("/api/turn/advance").status_code == 200
     with Session(client.engine) as s:
         assert named.get_instance(s, 1, "test_plain").age == 41
-        assert load_npc(s, 1, generic.id).age == generic.age               # ordinary NPCs do not age (existing behaviour)
+        assert load_npc(s, 1, generic.id).age == generic.age + 1           # persistent NPCs follow the world clock (npc_world.py)
 
 
 def create_persistent(session):

@@ -98,10 +98,14 @@ class NpcSpec(_Strict):
     age_range: tuple[int, int] | None = None        # inclusive; None means the adult stages of the species
     detail: DetailLevel | None = None               # None uses the category default
     culture: str | None = None                      # name culture; None follows the species
+    surname: str | None = None                      # use exactly this family name (e.g. a parent's)
+    with_surname: bool | None = None                # force a surname on or off; None follows the culture
     # base stats (strength, dexterity, constitution, wisdom, charisma)
     stat_range: tuple[int, int] = DEFAULT_STAT_RANGE
     stat_bonus: dict[str, int] = {}                 # added after the roll, e.g. {strength: 10} for a veteran
-    stats: dict[str, int] = {}                      # exact values that replace the roll
+    stats: dict[str, int] = {}                      # exact FINAL values that replace the roll (never developed)
+    birth_stats: dict[str, int] = {}                # newborn values that replace the roll; then developed to the age
+    develop: bool = True                            # False: the age adds no development (a flat newborn-level roll)
     # traits and talent
     traits: list[str] = []                          # always given
     random_traits: int = Field(default=0, ge=0)     # extra traits drawn from those that can be born with
@@ -117,6 +121,8 @@ class NpcSpec(_Strict):
         for label, (lo, hi) in (("stat_range", self.stat_range), ("combat_level", self.combat_level)):
             if not 0 <= lo <= hi:
                 raise ValueError(f"{label} must be [min, max] with 0 <= min <= max")
+        if self.surname is not None and not self.surname.strip():
+            raise ValueError("surname cannot be blank")
         if self.age_range is not None and not 0 <= self.age_range[0] <= self.age_range[1]:
             raise ValueError("age_range must be [min, max] with 0 <= min <= max")
         return self
@@ -124,12 +130,23 @@ class NpcSpec(_Strict):
 
 # ---------------------------------------------------------------- the NPC
 
+class NpcProgress(_Strict):
+    """What has already happened to an NPC's development, so nothing is applied twice (see progression.py).
+    Optional on an NPC: older saves have none and are stamped, without any back-filled growth, when next saved."""
+    developed_age: int = Field(ge=0)                # growth for every age up to this one has been applied
+    aged_year: int | None = None                    # the world year the NPC's age was last brought up to
+    breakthroughs: dict[str, int] = {}              # base stat -> breakthroughs so far (they are limited per lifetime)
+    experiences: list[str] = []                     # life experiences held (npc_growth.yaml `experiences`)
+    events: list[str] = []                          # life-event keys already applied (idempotency)
+
+
 class Npc(_Strict):
     """Shared identity plus optional attribute sections. A section that is None has not been generated yet."""
     id: str
     category: CharacterCategory
     status: LifecycleStatus = LifecycleStatus.ACTIVE
     name: str = Field(min_length=1)
+    surname: str | None = None                      # the family name inside `name`, when known (see surnames.py)
     species_id: str
     age: int = Field(ge=0)
     cause_of_death: str | None = None
@@ -141,6 +158,7 @@ class Npc(_Strict):
     traits: list[str] | None = None
     talent: str | None = None                       # hidden talent id
     talent_state: Literal["none", "dormant", "awakened"] = "none"
+    progress: NpcProgress | None = None             # development state; None for authored characters and old saves
     # Runtime state of an authored (named) character. The definition is never copied here: `definition` only names
     # it, so title, lore and affiliations are always read from the content file (see named.py).
     definition: str | None = None                   # the authored definition's id
@@ -247,15 +265,23 @@ def _adapter(npc: Npc, ct: Content, *, stats=None, skills=None, traits=None) -> 
         cause_of_death=npc.cause_of_death)
 
 
-def _roll_stats(npc: Npc, ct: Content) -> dict[str, int]:
+def _develop_stats(npc: Npc, ct: Content) -> tuple[dict[str, int], dict[str, int]]:
+    """Birth stats, then (once) the development an NPC of this age would have had. Returns (stats, breakthroughs).
+    `spec.stats` are exact final values and are never developed; `spec.birth_stats` replace the newborn roll only."""
+    from .progression import initial_development            # lazily: progression imports this module
     spec, sp = npc.spec or NpcSpec(), ct.species[npc.species_id]
     rng = _stream(npc.seed, "stats")
     lo, hi = spec.stat_range
-    out = {}
+    birth = {}
     for s in STATS:                                            # always draw all five, so the stream stays stable
         value = rng.randint(lo, hi) + sp.stat_modifiers.get(s, 0) + spec.stat_bonus.get(s, 0)
-        out[s] = max(1, min(sp.stat_cap, spec.stats.get(s, value)))
-    return out
+        birth[s] = max(1, min(sp.stat_cap, spec.birth_stats.get(s, value)))
+    stats, breakthroughs = initial_development(birth, npc, ct) if spec.develop and npc.age > 0 else (birth, {})
+    return {s: max(1, min(sp.stat_cap, spec.stats.get(s, stats[s]))) for s in STATS}, breakthroughs
+
+
+def _roll_stats(npc: Npc, ct: Content) -> dict[str, int]:
+    return _develop_stats(npc, ct)[0]
 
 
 def _roll_skills(npc: Npc, ct: Content, cfg: PowerConfig) -> dict[str, float]:
@@ -304,14 +330,16 @@ def _fill(npc: Npc, ct: Content, cfg: PowerConfig) -> dict:
     if npc.seed is None:
         return {"stats": npc.stats or {}, "skills": npc.skills or {}, "traits": npc.traits or [],
                 "talent": npc.talent, "talent_state": npc.talent_state}
-    stats = npc.stats if npc.stats is not None else _roll_stats(npc, ct)
+    stats, breakthroughs = (npc.stats, dict(npc.progress.breakthroughs) if npc.progress else {}) \
+        if npc.stats is not None else _develop_stats(npc, ct)
     skills = npc.skills if npc.skills is not None else _roll_skills(npc, ct, cfg)
     traits = npc.traits if npc.traits is not None else _roll_traits(npc, ct, stats, skills)
     talent, state = npc.talent, npc.talent_state
     if npc.traits is None:                                     # the talent is settled together with the traits
         talent = _roll_talent(npc, ct, _adapter(npc, ct, stats=stats, skills=skills, traits=traits))
         state = "dormant" if talent else "none"
-    return {"stats": stats, "skills": skills, "traits": traits, "talent": talent, "talent_state": state}
+    return {"stats": stats, "skills": skills, "traits": traits, "talent": talent, "talent_state": state,
+            "breakthroughs": breakthroughs}
 
 
 def ensure_attributes(npc: Npc, *, stats: bool = False, combat: bool = False, traits: bool = False,
@@ -324,6 +352,8 @@ def ensure_attributes(npc: Npc, *, stats: bool = False, combat: bool = False, tr
     filled = _fill(npc, ct, cfg)
     if stats and npc.stats is None:
         npc.stats = filled["stats"]
+        if npc.progress is None:                               # the age's development is in these stats: it is done
+            npc.progress = NpcProgress(developed_age=npc.age, breakthroughs=filled["breakthroughs"])
     if combat and npc.skills is None:
         npc.skills = filled["skills"]
     if traits and npc.traits is None:
@@ -355,10 +385,10 @@ class NpcFactory:
         species = _stream(seed, "species").choice(_species_pool(spec, self.ct))
         lo, hi = spec.age_range or default_age_range(species, self.ct)
         name = self.names.generate(rng=_stream(seed, "name"), species=species, culture=spec.culture,
-                                   taken=taken_names)
+                                   surname=spec.surname, with_surname=spec.with_surname, taken=taken_names)
         npc = Npc(
             id=new_id(spec.category, _stream(seed, "id")), category=spec.category, name=name.full,
-            species_id=species, age=_stream(seed, "age").randint(lo, hi), seed=seed, spec=spec)
+            surname=name.surname, species_id=species, age=_stream(seed, "age").randint(lo, hi), seed=seed, spec=spec)
         if (spec.detail or CATEGORY_DETAIL[spec.category]) == DetailLevel.FULL:
             ensure_all(npc, self.ct, self.cfg)
         return npc

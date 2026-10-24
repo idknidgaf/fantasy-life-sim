@@ -31,8 +31,11 @@ from .inheritance import (
     DescendantConflictError, InheritanceReport, InheritanceRules, InvalidChildAgeError, NoParentsError,
     ParentNotEligibleError, ParentSource, MAX_PARENTS, check_parents, get_inheritance_rules, plan_inheritance,
 )
-from .models import CharacterRecord, NpcRecord
+from . import family
+from .known import is_recorded, record_known
+from .models import Campaign, CharacterRecord, NpcRecord
 from .npc import CharacterCategory, Npc, NpcFactory, NpcSpec, to_character
+from .surnames import choose_surname, parent_surname
 from .npc_store import load_npc, save_npc
 from .power import PowerConfig, get_power_config
 from .relationships import PLAYER_PREFIX, add_parent, ancestors_of, parents_of
@@ -51,6 +54,7 @@ class Descendant:
     skipped: list[SkippedParent] = field(default_factory=list)
     report: InheritanceReport | None = None              # what was inherited from whom
     created: bool = True                                 # False when this call found the child already saved
+    parent_relations: list[str] = field(default_factory=list)   # how the two parents are related (sibling, half_sibling, cousin); never a reason to refuse unless inheritance.yaml forbids it
 
 
 def descendant_seed(seed: int, index: int) -> int:
@@ -66,23 +70,29 @@ def _load_parent(session: Session, campaign_id: int, ref: str, ct: Content,
         rec = session.get(CharacterRecord, int(number)) if number.isdigit() else None
         if rec is None or rec.campaign_id != campaign_id:
             return "no such playable character in this campaign"
-        return ParentSource(ref, sim.repair(rec.to_character()))
+        return ParentSource(ref, sim.repair(rec.to_character()), parent_surname(None, rec.name))
     row = session.exec(select(NpcRecord).where(NpcRecord.campaign_id == campaign_id, NpcRecord.npc_id == ref)).first()
     if row is None:
         return "no such character in this campaign"
     if row.category == CharacterCategory.GENERIC.value:
         return "a temporary NPC; promote it to persistent first"
-    return ParentSource(ref, to_character(Npc.model_validate(row.data), ct, cfg))
+    npc = Npc.model_validate(row.data)
+    return ParentSource(ref, to_character(npc, ct, cfg), parent_surname(npc.surname, npc.name))
 
 
 def create_descendant(session: Session, campaign_id: int, parents: Sequence[str | None], *, seed: int | None = None,
                       age: int = 0, rules: InheritanceRules | None = None, factory: NpcFactory | None = None,
-                      taken_names: Sequence[str] | None = None) -> Descendant:
+                      taken_names: Sequence[str] | None = None, key: str | None = None) -> Descendant:
     """Make a child of one or two parents, save it, and link it to them. Nothing is committed.
 
     `parents` are stable ids; None (or a missing second parent) just means that parent is unknown. `age` is the
     child's age, default a newborn; it must be below every parent's. `seed` makes the child reproducible (and is
-    what makes a retry return the same child); with none, one is drawn and kept on the child.
+    what makes a retry return the same child); with none, one is drawn and kept on the child. `key` is for callers that
+    cannot keep a seed: with a key and no seed, the seed is derived from the campaign and the key, so repeating the
+    same operation (a retried request) returns the child it already made instead of making another.
+
+    A child is born at `age` with newborn-level attributes developed ONCE to that age (progression.initial_development);
+    it is stamped as developed for its age, so the yearly tick never grows it a second time.
     """
     ct, cfg = (factory.ct, factory.cfg) if factory else (get_content(), get_power_config())
     rules = rules or get_inheritance_rules()
@@ -113,12 +123,23 @@ def create_descendant(session: Session, campaign_id: int, parents: Sequence[str 
         if a.ref in ancestors_of(session, campaign_id, b.ref) or b.ref in ancestors_of(session, campaign_id, a.ref):
             raise ParentNotEligibleError(f"{a.character.name} and {b.character.name} are in the same direct line")
 
-    seed = secrets.randbits(63) if seed is None else seed
+    relations = family.pair_relations(session, campaign_id, [p.ref for p in sources])
+    blocked = [r for r in relations if r in rules.parents.forbidden_relations]
+    if blocked:
+        raise ParentNotEligibleError(f"{sources[0].character.name} and {sources[1].character.name} are {' and '.join(blocked)}, "
+                                     "which the inheritance rules do not allow")
+
+    if seed is None:
+        campaign = session.get(Campaign, campaign_id)
+        seed = (random.Random(f"{campaign.seed if campaign else 0}:descendant:key:{key}").getrandbits(63)
+                if key is not None else secrets.randbits(63))
     plan = plan_inheritance(sources, seed, age=age, rules=rules, ct=ct, cfg=cfg)
+    name = choose_surname(sources, plan.species_id, seed, rules, factory.names)
     child = factory.generate(
         NpcSpec(category=CharacterCategory.PERSISTENT, species=plan.species_id, age_range=(age, age),
-                stats=plan.stats, traits=plan.traits, talent=plan.talent, talent_chance=plan.talent_chance,
-                combat=plan.combat),                      # explicit, so no random combat is added on top
+                birth_stats=plan.stats, traits=plan.traits, talent=plan.talent, talent_chance=plan.talent_chance,
+                combat=plan.combat,                       # explicit, so no random combat is added on top
+                surname=name.surname, with_surname=name.with_surname),
         seed=seed, taken_names=taken_names)
 
     used = [p.ref for p in sources]
@@ -126,9 +147,11 @@ def create_descendant(session: Session, campaign_id: int, parents: Sequence[str 
     if existing is not None:
         if set(parents_of(session, campaign_id, child.id)) != set(used):
             raise DescendantConflictError(f"seed {seed} already made a different child ({existing.name}); use another seed")
-        return Descendant(existing, used, skipped, plan.report, created=False)
+        return Descendant(existing, used, skipped, plan.report, created=False, parent_relations=relations)
 
     with session.begin_nested():                          # the child and its links are saved together or not at all
         save_npc(session, campaign_id, child)
         add_parent(session, campaign_id, child.id, *used)
-    return Descendant(child, used, skipped, plan.report)
+        if any(r.startswith(PLAYER_PREFIX) or is_recorded(session, campaign_id, r) for r in used):
+            record_known(session, campaign_id, child.id, "birth")      # born into the family the player knows
+    return Descendant(child, used, skipped, plan.report, parent_relations=relations)

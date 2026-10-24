@@ -23,13 +23,13 @@ import random
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
-from typing import Sequence
+from typing import Literal, Sequence
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from .character import Character
-from .content import DATA_DIR, STATS, Content, ContentError, _stage_first_age, get_content
+from .content import DATA_DIR, STATS, Content, ContentError, TraitDef, _stage_first_age, get_content
 from .npc import DEFAULT_STAT_RANGE
 from .power import PowerConfig, get_power_config
 from .rules import requirements_met
@@ -77,6 +77,9 @@ def _ordered(label: str, pair: tuple[int, int]) -> None:
 class ParentRules(_Strict):
     min_stage: str = "young_adult"
     forbid_direct_line: bool = True
+    # Relations (family.py) that may NOT have a child together. Empty by default: siblings and cousins are identified
+    # (Descendant.parent_relations) but never prohibited unless a game rule lists them here.
+    forbidden_relations: list[Literal["sibling", "half_sibling", "cousin"]] = []
     cannot_parent: list[str] = []
 
 
@@ -137,6 +140,21 @@ class TalentRules(_Strict):
     inherit_chance: float = Field(default=0.10, ge=0, le=1)
 
 
+SurnameMode = Literal["first_parent", "random_parent", "none"]
+
+
+class SurnameRules(_Strict):
+    """Family names (see surnames.py). Kept apart from the name generator and from character ids."""
+    mode: SurnameMode = "first_parent"          # which available parent's surname the child takes; none = never inherit
+    fallback: Literal["generate", "none"] = "generate"      # no surname to inherit: draw one by the culture's chance, or go without
+    cross_culture: Literal["inherit", "fallback"] = "inherit"   # a parent of another naming culture: take the name anyway, or fall back
+    cultures: dict[str, SurnameMode] = {}       # per name culture (names.yaml), e.g. {wolf: none}
+
+
+class NamingRules(_Strict):
+    surname: SurnameRules = Field(default_factory=SurnameRules)
+
+
 class InheritanceRules(_Strict):
     parents: ParentRules = Field(default_factory=ParentRules)
     crossings: list[Crossing] = []
@@ -144,6 +162,7 @@ class InheritanceRules(_Strict):
     specialised: SpecialisedRules = Field(default_factory=SpecialisedRules)
     traits: TraitRules = Field(default_factory=TraitRules)
     talent: TalentRules = Field(default_factory=TalentRules)
+    naming: NamingRules = Field(default_factory=NamingRules)
 
 
 def _cross_check(rules: InheritanceRules, ct: Content, cfg: PowerConfig, name: str) -> list[str]:
@@ -160,6 +179,11 @@ def _cross_check(rules: InheritanceRules, ct: Content, cfg: PowerConfig, name: s
         seen.add(key)
     named = [*rules.traits.extra, *rules.traits.exclude, *rules.traits.overrides]
     errs += [f"{name}: traits: unknown trait '{t}'" for t in named if t not in ct.traits]
+    from .names import get_name_config                         # lazily: keeps this module free of naming at import time
+    errs += [f"{name}: naming.surname.cultures: unknown name culture '{c}'"
+             for c in rules.naming.surname.cultures if c not in get_name_config().cultures]
+    errs += [f"{name}: traits.extra: '{t}' is marked inheritance.inheritable: false in traits.yaml"
+             for t in rules.traits.extra if t in ct.traits and ct.traits[t].inheritance.inheritable is False]
     return errs
 
 
@@ -193,6 +217,7 @@ class ParentSource:
     playable character), so one set of rules serves both."""
     ref: str
     character: Character
+    surname: str | None = None              # the family name, when known (surnames.parent_surname)
 
 
 def adult_age(species_id: str, rules: InheritanceRules, ct: Content) -> int:
@@ -303,26 +328,60 @@ def _plan_skills(species_id: str, parents: Sequence[ParentSource], rules: Specia
     return start, parent_levels
 
 
+def trait_origin(trait: TraitDef) -> str:
+    """How a trait comes about: `birth` (can be present at birth), `acquired` (only gained through life experiences),
+    `both`, or `granted` (species or story only: neither rule exists)."""
+    born, gained = trait.birth is not None, bool(trait.acquire)
+    return "both" if born and gained else "birth" if born else "acquired" if gained else "granted"
+
+
+def is_inheritable(trait_id: str, rules: TraitRules, ct: Content) -> bool:
+    """Can this trait be passed to a child? `exclude` always wins; then the trait's own `inheritance.inheritable`;
+    then the default (born-with traits, plus anything in `extra`)."""
+    d = ct.traits.get(trait_id)
+    if d is None or trait_id in rules.exclude:
+        return False
+    if d.inheritance.inheritable is not None:
+        return d.inheritance.inheritable
+    return d.birth is not None or trait_id in rules.extra
+
+
+def trait_chance(trait_id: str, rules: TraitRules, ct: Content) -> float:
+    """Per-parent chance: inheritance.yaml `overrides`, else the trait's own `inheritance.chance`, else its tier."""
+    d = ct.traits[trait_id]
+    if trait_id in rules.overrides:
+        return rules.overrides[trait_id]
+    if d.inheritance.chance is not None:
+        return d.inheritance.chance
+    return rules.chance.get(d.tier, 0.0)
+
+
 def _inheritable_traits(rules: TraitRules, ct: Content) -> list[str]:
-    return sorted(t for t, d in ct.traits.items()
-                  if (d.birth is not None or t in rules.extra) and t not in rules.exclude)
+    return sorted(t for t in ct.traits if is_inheritable(t, rules, ct))
 
 
 def _plan_traits(species_id: str, parents: Sequence[ParentSource], rules: TraitRules, seed: int,
-                 ct: Content) -> dict[str, list[str]]:
+                 ct: Content, child: Character | None = None) -> dict[str, list[str]]:
     rng = _stream(seed, "traits")
     own = set(ct.species[species_id].innate_traits)
     passed: dict[str, list[str]] = {}
     for trait in _inheritable_traits(rules, ct):
         if trait in own:
             continue
-        chance = rules.overrides.get(trait, rules.chance.get(ct.traits[trait].tier, 0.0))
+        chance = trait_chance(trait, rules, ct)
         for p in parents:
             if trait in p.character.traits and rng.random() < chance:
                 passed.setdefault(trait, []).append(p.ref)
     if len(passed) > rules.max_inherited:
         keep = set(rng.sample(sorted(passed), rules.max_inherited))
         passed = {t: refs for t, refs in passed.items() if t in keep}
+    if child is not None:                                  # a trait's prerequisites hold for the child, as for any route
+        probe = Character(name=child.name, species_id=child.species_id, stats=dict(child.stats), traits=list(own))
+        for trait in sorted(passed):
+            if requirements_met(ct.traits[trait].prerequisites, probe, ct):
+                probe.traits.append(trait)
+            else:
+                del passed[trait]
     return passed
 
 
@@ -353,7 +412,8 @@ def plan_inheritance(parents: Sequence[ParentSource], seed: int, *, age: int = 0
     aptitude = _aptitudes(parents, ct)
     stats = _plan_stats(species, aptitude, rules.stats, seed, ct)
     combat, parent_levels = _plan_skills(species, parents, rules.specialised, seed, ct, cfg)
-    trait_sources = _plan_traits(species, parents, rules.traits, seed, ct)
+    trait_sources = _plan_traits(species, parents, rules.traits, seed, ct,
+                                 Character(name="child", species_id=species, age=age, stats=stats))
     traits = list(trait_sources)
     probe = Character(name="child", species_id=species, age=age, stats=stats, traits=traits)
     talent, talent_from = _plan_talent(probe, parents, rules.talent, seed, ct)

@@ -352,3 +352,37 @@ def test_an_unknown_or_underage_playable_character_is_not_a_parent(client):  # n
             create_descendant(s, cid, ["pc_9999"], seed=1)
         with pytest.raises(ParentNotEligibleError, match="too young"):               # a new character is a baby
             create_descendant(s, cid, [rel.player_ref(rec)], seed=1)
+
+
+# ---------------------------------------------------------------- retried operations
+
+def test_a_retry_with_the_same_key_returns_the_same_child_not_a_second_one():
+    from sqlmodel import select
+    from app.models import NpcRecord
+    from tests.progress_helpers import new_db, person
+    from app.npc_store import save_npc
+    with Session(new_db()) as db:
+        p = person(age=30, seed=3)
+        save_npc(db, 1, p)
+        first = create_descendant(db, 1, [p.id], key="birth:2026-a")
+        retry = create_descendant(db, 1, [p.id], key="birth:2026-a")
+        other = create_descendant(db, 1, [p.id], key="birth:2026-b")
+        assert first.created and not retry.created and retry.npc.id == first.npc.id and other.npc.id != first.npc.id
+        assert len(db.exec(select(NpcRecord).where(NpcRecord.category == "persistent")).all()) == 3     # parent + 2
+
+
+def test_a_child_is_born_with_age_appropriate_attributes_and_is_not_grown_twice():
+    from tests.progress_helpers import new_db, person
+    from app.npc_store import save_npc, load_npc
+    from app.npc_world import advance_world
+    with Session(new_db()) as db:
+        p = person(age=40, seed=3)
+        save_npc(db, 1, p)
+        baby = create_descendant(db, 1, [p.id], seed=11, age=0).npc
+        teen = create_descendant(db, 1, [p.id], seed=12, age=16).npc
+        assert baby.progress.developed_age == 0 and teen.progress.developed_age == 16
+        before = load_npc(db, 1, teen.id)
+        advance_world(db, 1, 0)
+        assert load_npc(db, 1, teen.id) == before                 # nothing re-applied at the same world year
+        advance_world(db, 1, 1)
+        assert load_npc(db, 1, teen.id).age == 17 and load_npc(db, 1, baby.id).age == 1

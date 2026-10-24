@@ -35,6 +35,7 @@ from .npc import (
     CharacterCategory, ID_PREFIX, LifecycleStatus, NamedCharacterDef, Npc, NpcSpec, _fill, get_named_characters,
     named_npc,
 )
+from .known import record_known
 from .npc_store import list_npcs, load_npc, save_npc
 from .power import PowerConfig, get_power_config
 from .relationships import RelationshipKind, add_relationship, relationships_of
@@ -148,11 +149,13 @@ def instantiate(session: Session, campaign_id: int, definition_id: str, *, defs:
     existing = get_instance(session, campaign_id, definition_id)
     if existing is not None:
         report = sync_npc(session, campaign_id, existing, d, defs)
+        record_known(session, campaign_id, existing.id, "story")
         return Instance(get_instance(session, campaign_id, definition_id), False, report)
     campaign = session.get(Campaign, campaign_id)
     npc = build_npc(d, ct, cfg, campaign.seed if campaign else 0)
     save_npc(session, campaign_id, npc)
     apply_relationships(session, campaign_id, definition_id, defs)
+    record_known(session, campaign_id, npc.id, "story")            # introduced by the story: the player has met them
     return Instance(get_instance(session, campaign_id, definition_id), True)
 
 

@@ -25,6 +25,9 @@ class Campaign(SQLModel, table=True):
     seed: int
     active: bool = True
     created_at: datetime = Field(default_factory=_now)
+    # The world's clock, in years: it moves once for every year the playable character ages, and NEVER goes back, not
+    # even when an heir takes over at an older age. NPCs are brought up to it exactly once per year (npc_world.py).
+    world_year: int = 0
 
 
 class CharacterRecord(SQLModel, table=True):
@@ -198,6 +201,20 @@ class NpcRecord(SQLModel, table=True):
     name: str
     age: int = 0
     data: dict = Field(default_factory=dict, sa_column=Column(JSON))
+
+
+class KnownNpc(SQLModel, table=True):
+    """The persistent record that the player's family has met an NPC. It is what makes an NPC "known" to the Character
+    tab (see npc_api.py): generating an NPC, even saving one, does not. Scoped to the campaign (the family line), not to one
+    playable life, so an heir still knows who their parent knew. One row per NPC (unique), so recording it twice is harmless.
+    A new table, so existing saves need no migration."""
+    __table_args__ = (UniqueConstraint("campaign_id", "npc_id", name="uq_known_npc"),)
+    id: int | None = Field(default=None, primary_key=True)
+    campaign_id: int = Field(foreign_key="campaign.id", index=True)
+    npc_id: str = Field(index=True)
+    source: str = "encounter"                    # encounter | story | birth | manual: how they were first met
+    first_met_year: int = 0                      # the campaign's world year
+    created_at: datetime = Field(default_factory=_now)
 
 
 class CharacterRelationship(SQLModel, table=True):

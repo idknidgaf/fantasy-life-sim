@@ -120,6 +120,14 @@ class AcquireRule(Strict):
     narrative: str
 
 
+class TraitInheritance(Strict):
+    """Whether and how likely a trait is passed to a child (see inheritance.py). Both fields are optional; leaving them
+    out keeps the default: a trait that can be present at birth (`birth`) is inheritable, one that is only acquired
+    through life (`acquire`) is not, and the chance comes from the trait's rarity tier."""
+    inheritable: bool | None = None      # True/False overrides the default (False wins even over inheritance.yaml `extra`)
+    chance: float | None = Field(default=None, ge=0, le=1)     # per parent; overrides the tier chance
+
+
 class TraitDef(Strict):
     id: str
     name: str
@@ -130,6 +138,7 @@ class TraitDef(Strict):
     prerequisites: list[dict] = []
     birth: BirthRule | None = None
     acquire: list[AcquireRule] = []
+    inheritance: TraitInheritance = Field(default_factory=TraitInheritance)
 
 
 class AwakenRule(Strict):

@@ -61,3 +61,17 @@ traits:
 talent:
   base_chance: 0.01
   inherit_chance: 0.10
+
+# ---- family names ----
+# Separate from character ids and from the name generator (names.yaml). The child's given name is always generated.
+# A culture without family names (wolf, slime) never gets one. Otherwise `mode` picks which available parent's surname
+# the child takes: first_parent (the first listed), random_parent (seeded) or none. With nothing to inherit,
+# `fallback: generate` draws one by the culture's own chance and `fallback: none` goes without.
+# cross_culture: a parent of another naming culture (a human parent of an elf) is `inherit`ed from anyway, or skipped
+# (`fallback`). `cultures` overrides the mode per name culture, e.g. {draconic: none}.
+naming:
+  surname:
+    mode: first_parent
+    fallback: generate
+    cross_culture: inherit
+    cultures: {}

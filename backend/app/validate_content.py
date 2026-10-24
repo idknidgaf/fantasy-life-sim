@@ -7,6 +7,7 @@ from .inheritance import load_inheritance_rules
 from .names import load_name_config
 from .npc import load_named_characters
 from .power import load_power_config
+from .progression import load_growth_config
 from .story.errors import StoryContentError
 from .story.library import load_library
 
@@ -54,6 +55,12 @@ def main() -> int:
         print("INHERITANCE RULES INVALID\n" + str(e))
         return 1
     print(f"OK: inheritance.yaml ({len(rules.crossings)} species crossings)")
+    try:
+        growth = load_growth_config(ct, power)
+    except ContentError as e:
+        print("NPC GROWTH CONFIG INVALID\n" + str(e))
+        return 1
+    print(f"OK: npc_growth.yaml ({len(growth.profiles)} growth profiles, {len(growth.experiences)} experiences)")
     try:
         story = load_library(content=ct, named=named)
     except StoryContentError as e:

@@ -1,0 +1,105 @@
+# NPC growth rules. Read by app/progression.py; validated by `python -m app.validate_content`.
+# The full explanation is docs/NPC_PROGRESSION.md.
+#
+# Every year an NPC lives, each BASE stat (strength, dexterity, constitution, wisdom, charisma) may change:
+#
+#   1. a roll against the life-stage profile's `stat_chance` (times every modifier below, times a taper near the cap)
+#   2. if it hits: a rarer BREAKTHROUGH (a percentage of the current value, bounded by max_amount and by
+#      max_per_stat per lifetime) or else a SMALL gain
+#   3. old-age DECLINE is rolled separately, so it never cancels a gain by accident
+#
+# SPECIALISED stats (Magic, Swordsmanship, Marksmanship, Martial Arts) are skills, and are kept apart: they only
+# grow for an NPC who already trains them or has an experience that `trains` them, and only if the species can.
+# Power is never touched here: it is calculated from the result by the one Power system.
+#
+# Percentages (breakthrough.percent) are EXAMPLES you can tune; nothing assumes +10% or +50% anywhere in code.
+# Inflation is bounded three ways: absolute max_amount per breakthrough, a lifetime breakthrough limit per stat,
+# and caps that the chance tapers towards (full chance below taper_from * cap, none at the cap).
+#
+# `stages` reuse the life stages of stages.yaml, scaled to the species' lifespan, so a wolf's "childhood" is short.
+
+profiles:
+  childhood:
+    stages: [infancy, early_childhood, childhood]
+    stat_chance: 0.12
+    small: [1, 2]
+    breakthrough: {chance: 0.05, percent: [0.10, 0.30], max_amount: 6, max_per_stat: 2}
+    specialised: {chance: 0.0, gain: [0.5, 1.5]}
+  adolescence:
+    stages: [adolescence]
+    stat_chance: 0.18
+    small: [1, 2]
+    breakthrough: {chance: 0.08, percent: [0.10, 0.50], max_amount: 8, max_per_stat: 2}
+    specialised: {chance: 0.15, gain: [0.5, 2.0]}
+  adulthood:
+    stages: [young_adult, adulthood]
+    stat_chance: 0.06
+    small: [1, 2]
+    breakthrough: {chance: 0.05, percent: [0.10, 0.30], max_amount: 6, max_per_stat: 2}
+    specialised: {chance: 0.25, gain: [0.5, 2.5]}
+  old_age:
+    stages: [middle_age, elder]
+    stat_chance: 0.01
+    small: [1, 1]
+    breakthrough: {chance: 0.0, percent: [0.10, 0.10], max_amount: 1, max_per_stat: 0}
+    specialised: {chance: 0.05, gain: [0.2, 1.0]}
+    decline: {chance: 0.30, amount: [1, 2], stats: [constitution, strength, dexterity]}
+
+caps:
+  default: 85                    # a stat this high stops growing (never above the species' own stat_cap)
+  taper_from: 0.7                # growth chance is full below 70% of the cap and fades to nothing at the cap
+  stats: {}                      # per stat, e.g. {charisma: 90}
+  species: {dragonkin: 110}      # per species
+  specialised: {default: 60}     # specialised stat levels; add e.g. {magic: 80}
+
+aging:
+  die_of_old_age: true           # a persistent NPC dies once older than their species' lifespan, as named NPCs do
+
+trait_acquisition:
+  enabled: true                  # traits.yaml `acquire` rules, rolled once a year, scaled down for NPCs
+  chance_scale: 0.5
+
+initial:
+  chance_scale: 0.8              # an NPC generated at age N is developed once, from birth, at 80% of the yearly chance
+
+# ---- modifiers: who learns faster or slower. All multiply; `cap` adds to the cap; `stats` targets single stats ----
+# chance: yearly growth chance   amount: size of a gain   breakthrough: breakthrough chance   cap: +N to the cap
+stat_rates:                      # a different rate for every stat, so none grows "automatically" like the rest
+  strength: {chance: 1.0}
+  dexterity: {chance: 1.0}
+  constitution: {chance: 1.0}
+  wisdom: {chance: 0.9, cap: 5}
+  charisma: {chance: 0.8}
+
+species:
+  elf: {stats: {wisdom: {chance: 1.3}, dexterity: {chance: 1.1}, strength: {chance: 0.8}}}
+  dwarf: {stats: {constitution: {chance: 1.25}, strength: {chance: 1.2}}}
+  wolf: {chance: 1.2, stats: {charisma: {chance: 0.0}}}
+  slime: {stats: {charisma: {chance: 0.0}, constitution: {chance: 1.3}}}
+  dragonkin: {breakthrough: 1.5, stats: {strength: {chance: 1.2, cap: 10}}}
+
+traits:
+  generalist: {chance: 1.15}
+  iron_constitution: {stats: {constitution: {chance: 1.2}}}
+  keen_sense: {stats: {wisdom: {chance: 1.15}}}
+
+talents:
+  master_of_none: {chance: 1.1}
+  unbroken_will: {stats: {wisdom: {chance: 1.1}, constitution: {chance: 1.1}}}
+
+# ---- life experiences: hooks for school, mentors, professions, combat. Nothing grants these yet (that is a later
+# system); an NPC lists the ids it has in `progress.experiences` (progression.add_experience) and they apply here.
+# `trains` lets the NPC's specialised stat grow even from zero.
+experiences:
+  education:
+    chance: 1.4
+    stats: {wisdom: {chance: 1.5}}
+  mentored:
+    chance: 1.3
+    breakthrough: 2.0
+  soldier:
+    stats: {strength: {chance: 1.4}, constitution: {chance: 1.3}}
+    trains: [swordsmanship]
+  hunter:
+    stats: {dexterity: {chance: 1.4}}
+    trains: [marksmanship]

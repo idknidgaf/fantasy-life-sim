@@ -174,7 +174,7 @@ def test_stats_are_always_valid(species):
 
 def test_stat_range_bonus_and_exact_values_are_honoured():
     sp = CT.species["human"]
-    n = gen(NpcSpec(category="persistent", species="human", stat_range=(40, 50)), 2)
+    n = gen(NpcSpec(category="persistent", species="human", stat_range=(40, 50), develop=False), 2)   # a flat newborn roll
     assert all(40 + sp.stat_modifiers.get(k, 0) <= v <= 50 + sp.stat_modifiers.get(k, 0) for k, v in n.stats.items())
     plain = gen(NpcSpec(category="persistent", species="human"), 2)
     bonus = gen(NpcSpec(category="persistent", species="human", stat_bonus={"wisdom": 7}), 2)

@@ -20,8 +20,8 @@ from sqlalchemy import delete
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
-from .models import CharacterRelationship, NpcRecord
-from .npc import CharacterCategory, LifecycleStatus, Npc, ensure_all
+from .models import Campaign, CharacterRelationship, KnownNpc, NpcRecord
+from .npc import CharacterCategory, LifecycleStatus, Npc, NpcProgress, ensure_all
 from .relationships import remove_all_for
 
 GENERIC = CharacterCategory.GENERIC.value
@@ -72,6 +72,24 @@ def _upsert(session: Session, campaign_id: int, npc: Npc) -> NpcRecord:
     return rec
 
 
+def world_year_of(session: Session, campaign_id: int) -> int:
+    campaign = session.get(Campaign, campaign_id)
+    return campaign.world_year if campaign is not None else 0
+
+
+def stamp_progress(session: Session, campaign_id: int, npc: Npc) -> None:
+    """Record, on a persistent NPC, the world year its age is current for. An NPC with no progress (an older save, or one
+    built by hand) is stamped as fully developed for its age: no growth is back-filled. Named characters are left alone:
+    they age by their own lifecycle rule (named.py) and their authored stats do not grow."""
+    if npc.category != CharacterCategory.PERSISTENT:
+        return
+    year = world_year_of(session, campaign_id)
+    if npc.progress is None:
+        npc.progress = NpcProgress(developed_age=npc.age, aged_year=year)
+    elif npc.progress.aged_year is None:
+        npc.progress.aged_year = year
+
+
 def save_npc(session: Session, campaign_id: int, npc: Npc) -> NpcRecord:
     """Keep a persistent or named character. Its generated sections are settled first, so what is saved is
     complete and fixed. Saving the same character again updates it; the id never changes."""
@@ -79,6 +97,7 @@ def save_npc(session: Session, campaign_id: int, npc: Npc) -> NpcRecord:
         raise TemporaryNpcError(f"{npc.name} is a generic NPC; promote it to persistent to keep it, "
                                 "or use keep_temporary_npc if it only has to survive an encounter")
     ensure_all(npc)
+    stamp_progress(session, campaign_id, npc)
     return _upsert(session, campaign_id, npc)
 
 
@@ -88,6 +107,11 @@ def keep_temporary_npc(session: Session, campaign_id: int, npc: Npc) -> NpcRecor
     if npc.category != CharacterCategory.GENERIC:
         raise ValueError(f"{npc.name} is {npc.category.value}; use save_npc")
     return _upsert(session, campaign_id, npc)
+
+
+def update_record(rec: NpcRecord, npc: Npc) -> None:
+    """Write a changed NPC into the row it was loaded from (for callers that already hold the row)."""
+    _fill_columns(rec, npc)
 
 
 def load_npc(session: Session, campaign_id: int, npc_id: str) -> Npc | None:
@@ -131,6 +155,7 @@ def delete_npc(session: Session, campaign_id: int, npc_id: str) -> bool:
     if rec is None:
         return False
     remove_all_for(session, campaign_id, npc_id)
+    session.exec(delete(KnownNpc).where(KnownNpc.campaign_id == campaign_id, KnownNpc.npc_id == npc_id))
     session.delete(rec)
     session.flush()
     return True
@@ -148,6 +173,6 @@ def discard_temporary(session: Session, campaign_id: int, npc_ids: Iterable[str]
 
 def delete_campaign_npcs(session: Session, campaign_id: int) -> None:
     """Everything NPC-related that belongs to a campaign: its characters and their relationships."""
-    for table in (CharacterRelationship, NpcRecord):
+    for table in (CharacterRelationship, KnownNpc, NpcRecord):
         session.exec(delete(table).where(table.campaign_id == campaign_id))
     session.flush()

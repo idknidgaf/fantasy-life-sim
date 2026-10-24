@@ -28,33 +28,43 @@ ADDED_COLUMNS = {
 }
 
 
+CAMPAIGN_ADDED_COLUMNS = {
+    "world_year": "INTEGER NOT NULL DEFAULT 0",
+}
+
+
 def init_db(eng: Engine | None = None) -> None:
-    """Create tables, and upgrade the character table of an older save in place."""
+    """Create tables, and upgrade the character and campaign tables of an older save in place."""
     from . import models  # noqa: F401  (registers the tables)
 
     eng = eng or engine
     SQLModel.metadata.create_all(eng)
     _drop_orphaned_npcs(eng)
-    inspector = inspect(eng)
-    table = models.CharacterRecord.__tablename__
-    existing = {c["name"] for c in inspector.get_columns(table)}
-    missing = [c for c in models.CharacterRecord.__table__.columns.keys() if c not in existing]
+    _add_missing_columns(eng, models.CharacterRecord, ADDED_COLUMNS)
+    _add_missing_columns(eng, models.Campaign, CAMPAIGN_ADDED_COLUMNS)
+
+
+def _add_missing_columns(eng: Engine, model, known: dict[str, str]) -> None:
+    table = model.__tablename__
+    existing = {c["name"] for c in inspect(eng).get_columns(table)}
+    missing = [c for c in model.__table__.columns.keys() if c not in existing]
     if not missing:
         return
 
-    unknown = [c for c in missing if c not in ADDED_COLUMNS]
+    unknown = [c for c in missing if c not in known]
     if unknown:
-        raise RuntimeError(f"Don't know how to upgrade the save file: missing columns {unknown}")
+        raise RuntimeError(f"Don't know how to upgrade the save file: missing columns {unknown} in {table}")
 
     path = eng.url.database
     if eng.url.get_backend_name() == "sqlite" and path and path != ":memory:" and os.path.exists(path):
         backup = f"{path}.backup-{datetime.now():%Y%m%d-%H%M%S}"
-        shutil.copy(path, backup)
-        print(f"[save upgrade] backed up {path} to {backup}")
+        if not os.path.exists(backup):
+            shutil.copy(path, backup)
+            print(f"[save upgrade] backed up {path} to {backup}")
     with eng.begin() as conn:
         for column in missing:
-            conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {ADDED_COLUMNS[column]}"))
-    print(f"[save upgrade] added columns: {', '.join(missing)}")
+            conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {known[column]}"))
+    print(f"[save upgrade] added columns to {table}: {', '.join(missing)}")
 
 
 def _drop_orphaned_npcs(eng: Engine) -> None:
@@ -63,7 +73,7 @@ def _drop_orphaned_npcs(eng: Engine) -> None:
     from . import models
     campaign = models.Campaign.__tablename__
     with eng.begin() as conn:
-        for table in (models.CharacterRelationship.__tablename__, models.NpcRecord.__tablename__):
+        for table in (models.CharacterRelationship.__tablename__, models.KnownNpc.__tablename__, models.NpcRecord.__tablename__):
             conn.execute(text(f"DELETE FROM {table} WHERE campaign_id NOT IN (SELECT id FROM {campaign})"))
 
 
