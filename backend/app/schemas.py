@@ -104,6 +104,8 @@ class CharacterRead(BaseModel):
     # Action budget for the current year
     action_budget: int
     actions_remaining: int
+    social_budget: int                  # Social Actions per year (a separate budget from the Life actions above)
+    social_remaining: int
     actions_taken_labels: list[str]
     skills: dict[str, float]
     traits: list[TraitRead]

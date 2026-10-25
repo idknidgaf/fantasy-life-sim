@@ -175,6 +175,9 @@ export interface Character {
   happiness: number
   action_budget: number
   actions_remaining: number
+  /** Social Actions per year: a separate budget from the Life actions above. */
+  social_budget: number
+  social_remaining: number
   actions_taken_labels: string[]
   skills: Record<string, number>
   traits: Trait[]

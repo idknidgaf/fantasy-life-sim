@@ -22,6 +22,8 @@ ADDED_COLUMNS = {
     "items": "JSON DEFAULT '{}'",
     "queued_events": "JSON DEFAULT '[]'",
     "actions_taken": "JSON DEFAULT '[]'",
+    "social_actions_used": "INTEGER NOT NULL DEFAULT 0",
+    "social_requests": "JSON DEFAULT '[]'",
     "health": "INTEGER",
     "stress": "FLOAT NOT NULL DEFAULT 0",
     "happiness": "FLOAT NOT NULL DEFAULT 50",

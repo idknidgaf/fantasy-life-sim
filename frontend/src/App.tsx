@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api } from './api'
+import { api, newRequestId } from './api'
 import BattleSummary from './components/BattleSummary'
 import CharacterSheet from './components/CharacterSheet'
 import DeathSummary from './components/DeathSummary'
@@ -141,6 +141,7 @@ export default function App() {
     })
 
   const performAction = (id: string) => change(() => api.performAction(id))
+  const startSocialAction = () => change(() => api.startSocialAction(newRequestId()))
   const advanceTurn = () => change(() => api.advanceTurn())
   const resolveEvent = (eventId: string, choiceId: string) =>
     change(() => api.resolveEvent(eventId, choiceId))
@@ -247,6 +248,7 @@ export default function App() {
                 actions={actions}
                 busy={busy}
                 onAction={onAction}
+                onSocial={startSocialAction}
               />
             )}
           </section>

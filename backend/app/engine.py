@@ -37,6 +37,11 @@ DEFAULT_LABELS = {
 }
 
 
+# Social Actions are a budget of their own: this many per in-game year for every playable character, spent and reset
+# independently of the Life-action budget (the life stage's `action_count`).
+SOCIAL_ACTIONS_PER_YEAR = 3
+
+
 class NotAllowed(Exception):
     """The request is valid but not possible right now (HTTP 409)."""
 
@@ -190,6 +195,37 @@ def action_budget(c: Character, ct: Content | None = None) -> int:
 def actions_remaining(c: Character, ct: Content | None = None) -> int:
     ct = ct or get_content()
     return max(0, action_budget(c, ct) - len(c.actions_taken))
+
+
+def social_budget(c: Character) -> int:
+    """Social Actions per year. The same for every living character; none for the dead."""
+    return SOCIAL_ACTIONS_PER_YEAR if c.alive else 0
+
+
+def social_remaining(c: Character) -> int:
+    return max(0, social_budget(c) - c.social_actions_used)
+
+
+def start_social_action(c: Character, request_id: str | None = None) -> bool:
+    """Spend one Social Action. Returns True if one was spent.
+
+    A `request_id` already processed this year is a retry: nothing is spent again and it is not an error, even if the
+    budget is used up since. Otherwise it is refused (NotAllowed) when the character has died, an event needs a
+    decision, or no Social Actions remain, so the balance can never go below zero. Life actions are not touched.
+    Only the budget lives here; what a social action does is not implemented yet.
+    """
+    if request_id is not None and request_id in c.social_requests:
+        return False
+    if not c.alive:
+        raise NotAllowed("This character has died")
+    if c.pending_event:
+        raise NotAllowed("An event needs your decision first")
+    if social_remaining(c) <= 0:
+        raise NotAllowed("You have used all your Social Actions this year")
+    c.social_actions_used += 1
+    if request_id is not None:
+        c.social_requests.append(request_id)
+    return True
 
 
 def offer_actions(c: Character, seed: int) -> list[dict]:
@@ -356,6 +392,8 @@ def advance_turn(c: Character, seed: int) -> None:
     had_action = bool(c.actions_taken)
     c.age += 1
     c.actions_taken = []
+    c.social_actions_used = 0                    # a new year: the Social Action budget is full again. Set, never added
+    c.social_requests = []                       # to, so processing a year twice cannot overfill it
     stage = stage_of(c, ct)
     entries_before = len(c.history)
 
@@ -527,6 +565,9 @@ def repair(c: Character) -> Character:
         c.health = max(0, min(max_health(c, ct), c.health))
     c.stress = clamp_vital(c.stress)
     c.happiness = clamp_vital(c.happiness)
+    # Social Actions were added later: older saves start with a full budget; a corrupt value is brought into range.
+    c.social_actions_used = max(0, min(SOCIAL_ACTIONS_PER_YEAR, int(c.social_actions_used or 0)))
+    c.social_requests = [r for r in (c.social_requests or []) if isinstance(r, str)][-SOCIAL_ACTIONS_PER_YEAR:]
     return c
 
 

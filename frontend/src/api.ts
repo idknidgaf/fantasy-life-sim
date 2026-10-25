@@ -35,6 +35,12 @@ const post = <T>(path: string, body?: unknown) =>
 
 const enc = encodeURIComponent
 
+/** A fresh id for one click. Sent with the request, so a retry of the SAME click cannot spend a second Social Action. */
+export const newRequestId = (): string =>
+  typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+
 export const api = {
   getSkills: () => request<Record<string, string>>('/skills'),
   getSpecies: () => request<Species[]>('/species'),
@@ -48,6 +54,8 @@ export const api = {
   getCharacter: () => request<Character>('/character'),
   getActions: () => request<Option[]>('/actions'),
   performAction: (actionId: string) => post<Character>(`/actions/${enc(actionId)}`),
+  /** Spend one of the year's Social Actions (the backend refuses when none remain). */
+  startSocialAction: (requestId: string) => post<Character>('/social/start', { request_id: requestId }),
   advanceTurn: () => post<Character>('/turn/advance'),
   resolveEvent: (eventId: string, choiceId: string) =>
     post<Character>(`/events/${enc(eventId)}/choices/${enc(choiceId)}`),

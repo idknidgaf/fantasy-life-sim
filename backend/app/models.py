@@ -11,11 +11,11 @@ def _now() -> datetime:
 
 
 JSON_FIELDS = ("stats", "skills", "axes", "traits", "flags", "counters", "items", "history",
-               "queued_events", "actions_taken")
+               "queued_events", "actions_taken", "social_requests")
 DICT_FIELDS = ("stats", "skills", "axes", "counters", "items")
 PLAIN_FIELDS = ("name", "species_id", "age", "alive", "location", "cause_of_death",
                 "health", "stress", "happiness",
-                "pending_event", "hidden_talent", "talent_state")
+                "pending_event", "hidden_talent", "talent_state", "social_actions_used")
 
 
 class Campaign(SQLModel, table=True):
@@ -53,6 +53,8 @@ class CharacterRecord(SQLModel, table=True):
     history: list = Field(default_factory=list, sa_column=Column(JSON))
     queued_events: list = Field(default_factory=list, sa_column=Column(JSON))
     actions_taken: list = Field(default_factory=list, sa_column=Column(JSON))
+    social_actions_used: int = 0
+    social_requests: list = Field(default_factory=list, sa_column=Column(JSON))
     cause_of_death: str | None = None
     health: int | None = None
     stress: float = 0.0

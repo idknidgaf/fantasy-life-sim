@@ -1,10 +1,12 @@
 import type { Character, Option } from '../types'
+import SocialActions from './SocialActions'
 
 interface Props {
   character: Character
   actions: Option[]
   busy: boolean
   onAction: (actionId: string) => void
+  onSocial: () => void
 }
 
 interface Category {
@@ -34,7 +36,7 @@ function categorize(actions: Option[]): Category[] {
   ].filter((c) => c.items.length > 0)
 }
 
-export default function LifeTab({ character, actions, busy, onAction }: Props) {
+export default function LifeTab({ character, actions, busy, onAction, onSocial }: Props) {
   const remaining = character.actions_remaining
   const budget = character.action_budget
   const taken = character.actions_taken_labels
@@ -95,6 +97,15 @@ export default function LifeTab({ character, actions, busy, onAction }: Props) {
             </div>
           ))}
         </div>
+      )}
+
+      {character.alive && (
+        <SocialActions
+          remaining={character.social_remaining}
+          budget={character.social_budget}
+          busy={busy}
+          onStart={onSocial}
+        />
       )}
     </section>
   )

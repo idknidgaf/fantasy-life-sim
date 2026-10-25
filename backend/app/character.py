@@ -18,6 +18,9 @@ class Character(BaseModel):
     history: list[dict] = Field(default_factory=list)          # {age, kind, text, event_id}
     cause_of_death: str | None = None
     actions_taken: list[str] = Field(default_factory=list)   # actions performed this year
+    # Social Actions: a separate yearly budget (engine.SOCIAL_ACTIONS_PER_YEAR), independent of actions_taken.
+    social_actions_used: int = 0                              # spent this year; reset by Age Up
+    social_requests: list[str] = Field(default_factory=list)  # request ids already processed this year (retry safety)
     pending_event: str | None = None       # event id waiting for a decision
     # Vitals. health is set at birth from max_health; None marks an old save (repair fills it).
     health: int | None = None

@@ -4,7 +4,7 @@ from typing import Callable
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlmodel import Session, delete, select
 
 from . import battle_store, legacy, named, npc_world
@@ -107,6 +107,7 @@ def _character_read(rec: CharacterRecord, session: Session | None = None) -> Cha
         stress=c.stress, happiness=c.happiness,
         action_budget=sim.action_budget(c, ct),
         actions_remaining=sim.actions_remaining(c, ct),
+        social_budget=sim.social_budget(c), social_remaining=sim.social_remaining(c),
         actions_taken_labels=[sim.action_label(a, c.species_id, ct) for a in c.actions_taken],
         skills=c.skills,
         traits=[_trait_read(ct, t) for t in c.traits if t in ct.traits],
@@ -287,6 +288,20 @@ def perform_action(action_id: str, session: Session = Depends(get_session)):
     return _mutate(session, lambda c, seed: sim.perform_action(c, seed, action_id),
                    blocked_by_story=True,
                    story_scans=lambda: [("action", {"action": action_id}), ("state", {})])
+
+
+class SocialStartRequest(BaseModel):
+    # Sent once per click and repeated on a retry: a request already processed this year spends nothing more.
+    request_id: str | None = Field(default=None, min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_.:-]+$")
+
+
+@api.post("/social/start", response_model=CharacterRead)
+def start_social_action(body: SocialStartRequest | None = None, session: Session = Depends(get_session)):
+    """Start a Social Action: spends one of the year's three. The backend is authoritative: 409 when none remain, the
+    character has died or an event needs a decision. Repeating a `request_id` is harmless. The social content itself
+    does not exist yet, so this only spends the budget."""
+    request_id = body.request_id if body else None
+    return _mutate(session, lambda c, seed: sim.start_social_action(c, request_id), blocked_by_story=True)
 
 
 @api.post("/turn/advance", response_model=CharacterRead)
